@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brand Intelligence System — Ayush Maan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #111214; --text: #f0ede8; --muted: #5a6070; --dimmed: #2a2d35;
+  --orange: #f05a28; --border: rgba(255,255,255,0.07); --card: #0e1012;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; cursor: none; overflow-x: hidden; }
+* { scrollbar-width: thin; scrollbar-color: var(--dimmed) transparent; }
+canvas#starfield { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+#cursor-dot { position: fixed; width: 5px; height: 5px; background: rgba(255,255,255,0.9); border-radius: 50%; pointer-events: none; z-index: 10001; transform: translate(-50%,-50%); }
+#cursor-ring { position: fixed; width: 36px; height: 36px; border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; pointer-events: none; z-index: 10000; transform: translate(-50%,-50%); transition: width 0.3s cubic-bezier(0.25,0.46,0.45,0.94), height 0.3s cubic-bezier(0.25,0.46,0.45,0.94), border-color 0.25s; }
+#cursor-ring.on-link { width: 52px; height: 52px; border-color: rgba(255,255,255,0.5); }
+
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 20px 48px; display: flex; align-items: center; justify-content: space-between; background: rgba(17,18,20,0.85); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); }
+.nav-name { font-size: 14px; font-weight: 500; color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 14px; }
+.nav-role { font-size: 12px; color: var(--muted); font-weight: 300; }
+.nav-right { display: flex; align-items: center; gap: 32px; }
+.nav-link { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.nav-link:hover { color: var(--text); }
+.nav-cta { font-size: 13px; color: var(--text); text-decoration: none; border: 1px solid rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 100px; transition: background 0.2s; }
+.nav-cta:hover { background: rgba(255,255,255,0.06); }
+
+main { position: relative; z-index: 1; }
+
+/* HERO */
+.hero { position: relative; width: 100%; height: 100vh; overflow: hidden; }
+.hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; z-index: 0; }
+.hero-gradient { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(17,18,20,0.3) 0%, rgba(17,18,20,0.0) 30%, rgba(17,18,20,0.7) 70%, rgba(17,18,20,1) 100%); z-index: 1; pointer-events: none; }
+.hero-content { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 60px 0; }
+.back-link { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,0.6); text-decoration: none; position: absolute; top: 80px; left: 60px; transition: color 0.2s; letter-spacing: 0.04em; text-transform: uppercase; z-index: 3; }
+.back-link:hover { color: var(--text); }
+.back-link::before { content: '←'; }
+.hero-eyebrow { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--orange); margin-bottom: 20px; font-weight: 500; }
+
+.meta-strip { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid rgba(255,255,255,0.12); border-left: 1px solid rgba(255,255,255,0.12); margin-top: 48px; }
+.meta-item { padding: 20px 28px; border-right: 1px solid rgba(255,255,255,0.12); border-bottom: 1px solid rgba(255,255,255,0.12); background: rgba(17,18,20,0.6); backdrop-filter: blur(8px); }
+.meta-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(240,237,232,0.4); margin-bottom: 6px; font-weight: 500; }
+.meta-value { font-size: 14px; color: var(--text); font-weight: 400; }
+
+/* STAT BAND */
+.stat-band { background: var(--card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); display: grid; grid-template-columns: repeat(4, 1fr); }
+.stat-item { padding: 52px 60px; border-right: 1px solid var(--border); }
+.stat-item:last-child { border-right: none; }
+.stat-num { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; font-family: 'DM Sans', sans-serif; font-size: clamp(56px, 6.5vw, 92px); font-weight: 500; line-height: 1; color: var(--text); letter-spacing: -0.03em; margin-bottom: 10px; }
+.stat-label { font-size: 13px; color: rgba(240,237,232,0.5); font-weight: 300; line-height: 1.5; max-width: 180px; }
+
+/* CONTENT */
+.content { max-width: 1280px; margin: 0 auto; padding: 0 60px; }
+
+/* INTRO */
+.intro-block { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; padding: 100px 0 80px; border-bottom: 1px solid var(--border); }
+.intro-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(36px, 3.5vw, 52px); font-weight: 400; color: var(--text); line-height: 1.15; letter-spacing: -0.01em; }
+.intro-title em { font-style: italic; color: rgba(240,237,232,0.45); }
+.intro-body { font-size: 16px; color: rgba(240,237,232,0.6); line-height: 1.8; font-weight: 300; }
+.intro-body p + p { margin-top: 20px; }
+
+/* BEFORE AFTER */
+.before-after { margin: 80px 0; }
+.ba-label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--orange); margin-bottom: 32px; font-weight: 500; }
+.ba-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.ba-col { }
+.ba-col-header { padding: 20px 32px; background: var(--card); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+.ba-col-title { font-size: 13px; font-weight: 500; color: var(--muted); letter-spacing: 0.04em; }
+.ba-col:first-child .ba-col-header { border-right: 1px solid var(--border); }
+.ba-col:first-child .ba-row { border-right: 1px solid var(--border); }
+.ba-rows { }
+.ba-row { padding: 18px 32px; border-bottom: 1px solid var(--border); font-size: 14px; line-height: 1.5; font-weight: 300; }
+.ba-row.before { color: rgba(240,237,232,0.4); }
+.ba-row.after { color: var(--text); }
+.ba-row:last-child { border-bottom: none; }
+.ba-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.ba-dot.red { background: rgba(240,90,40,0.5); }
+.ba-dot.green { background: var(--orange); }
+
+/* IMAGE */
+.img-full { width: 100%; margin: 80px 0; }
+.img-ph { width: 100%; border-radius: 2px; background: var(--card); border: 1px dashed rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-size: 12px; letter-spacing: 0.06em; color: var(--muted); }
+.img-ph.h-large { height: 500px; }
+.img-ph.h-medium { height: 360px; }
+.img-two { width: 100%; margin: 0 0 80px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.img-three { width: 100%; margin: 0 0 80px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+/* SECTION */
+.section-label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--orange); margin-bottom: 16px; font-weight: 500; padding-top: 100px; }
+.section-headline { font-family: 'Cormorant Garamond', serif; font-size: clamp(36px, 3.5vw, 52px); font-weight: 400; color: var(--text); letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 20px; }
+.section-body { font-size: 16px; color: rgba(240,237,232,0.55); line-height: 1.8; font-weight: 300; max-width: 640px; margin-bottom: 60px; }
+
+/* FEATURES */
+.features { border-top: 1px solid var(--border); margin-bottom: 100px; }
+.feature { display: grid; grid-template-columns: 200px 1fr; gap: 0; border-bottom: 1px solid var(--border); padding: 52px 0; }
+.feature-left { padding-right: 40px; }
+.feature-tag { font-size: 11px; color: var(--orange); letter-spacing: 0.12em; font-weight: 500; margin-bottom: 6px; }
+.feature-num-big { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; font-family: 'Cormorant Garamond', serif; font-size: 72px; font-weight: 300; color: var(--dimmed); line-height: 1; letter-spacing: -0.04em; }
+.feature-right { padding-left: 60px; border-left: 1px solid var(--border); }
+.feature-name { font-family: 'Cormorant Garamond', serif; font-size: clamp(28px, 2.8vw, 40px); font-weight: 400; color: var(--text); line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 16px; }
+.feature-desc { font-size: 15px; color: rgba(240,237,232,0.55); line-height: 1.75; font-weight: 300; margin-bottom: 24px; max-width: 600px; }
+.feature-bullets { display: flex; flex-direction: column; gap: 10px; }
+.feature-bullet { font-size: 14px; color: rgba(240,237,232,0.45); padding-left: 20px; position: relative; line-height: 1.55; }
+.feature-bullet::before { content: ''; position: absolute; left: 0; top: 9px; width: 8px; height: 1px; background: var(--orange); opacity: 0.6; }
+
+/* TECH DECISIONS */
+.tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 100px; }
+.tech-card { background: var(--card); padding: 44px 48px; }
+.tech-icon { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--orange); margin-bottom: 16px; font-weight: 500; }
+.tech-title { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 300; color: var(--text); margin-bottom: 12px; letter-spacing: -0.01em; line-height: 1.2; }
+.tech-text { font-size: 14px; color: rgba(240,237,232,0.55); line-height: 1.7; font-weight: 300; }
+
+/* LEARNINGS */
+.learnings { border-top: 1px solid var(--border); margin-bottom: 100px; }
+.learning { display: grid; grid-template-columns: 80px 1fr; gap: 0; padding: 52px 0; border-bottom: 1px solid var(--border); align-items: start; }
+.learning-num { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; font-family: 'Cormorant Garamond', serif; font-size: 48px; font-weight: 300; color: var(--orange); opacity: 0.4; line-height: 1; padding-top: 4px; }
+.learning-body { padding-left: 48px; border-left: 1px solid var(--border); }
+.learning-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(22px, 2.2vw, 30px); font-weight: 300; color: var(--text); letter-spacing: -0.01em; margin-bottom: 12px; line-height: 1.2; }
+.learning-text { font-size: 15px; color: rgba(240,237,232,0.55); line-height: 1.75; font-weight: 300; max-width: 700px; }
+
+/* LIVE LINK */
+.live-block { background: #0d1a18; border: 1px solid rgba(240,90,40,0.15); border-radius: 3px; padding: 52px 60px; display: flex; align-items: center; justify-content: space-between; gap: 40px; margin-bottom: 100px; }
+.live-text { font-family: 'Cormorant Garamond', serif; font-size: clamp(24px, 2.5vw, 36px); font-weight: 300; color: var(--text); letter-spacing: -0.01em; }
+.live-text span { color: var(--orange); }
+.live-btn { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; color: var(--bg); background: var(--orange); padding: 14px 28px; border-radius: 100px; text-decoration: none; white-space: nowrap; transition: opacity 0.2s; }
+.live-btn:hover { opacity: 0.85; }
+
+/* MORE */
+.more { border-top: 1px solid var(--border); padding: 100px 0 80px; }
+.more-label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 48px; font-weight: 500; }
+.more-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; }
+.more-card { text-decoration: none; display: block; }
+.more-img { width: 100%; height: 220px; border-radius: 2px; overflow: hidden; margin-bottom: 18px; }
+.more-img div { width: 100%; height: 100%; transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94); }
+.more-card:hover .more-img div { transform: scale(1.04); }
+.more-name { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.more-type { font-size: 12px; color: var(--muted); }
+.more-row { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.more-year { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+/* FOOTER */
+.cs-footer { border-top: 1px solid var(--border); padding: 100px 0 60px; }
+.footer-eyebrow { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 20px; }
+.footer-email { font-family: 'Cormorant Garamond', serif; font-size: clamp(44px, 7vw, 104px); font-weight: 300; color: var(--text); letter-spacing: -0.03em; line-height: 1; text-decoration: none; display: block; transition: color 0.2s; margin-bottom: 80px; }
+.footer-email:hover { color: var(--orange); }
+.footer-contact-row { display: flex; flex-wrap: wrap; gap: 28px; margin-top: -56px; margin-bottom: 56px; }
+.footer-contact-item { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.footer-contact-item:hover { color: var(--text); }
+
+.footer-bottom { display: flex; align-items: center; justify-content: space-between; }
+.footer-credit { font-size: 12px; color: var(--muted); }
+.footer-links { display: flex; gap: 10px; }
+.footer-link { font-size: 12px; color: var(--muted); text-decoration: none; border: 1px solid var(--border); padding: 6px 16px; border-radius: 100px; transition: color 0.2s, border-color 0.2s; }
+.footer-link:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+.reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.75s ease, transform 0.75s cubic-bezier(0.25,0.46,0.45,0.94); }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.reveal-up { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94); }
+.reveal-up.visible { opacity: 1; transform: translateY(0); }
+
+.g-teal { background: linear-gradient(135deg,#003C39,#0d5c52); }
+.g-dark { background: linear-gradient(135deg,#1a1d22,#2a2d35); }
+.g-light { background: linear-gradient(135deg,#e8edf2,#c8d6e4); }
+</style>
+<style>
+* { font-variant-numeric: lining-nums; }
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+<nav>
+  <a href="portfolio.html" class="nav-name">Ayush <span class="nav-role">Head of Design</span></a>
+  <div class="nav-right">
+    <a href="portfolio.html#work" class="nav-link">Work</a>
+    <a href="portfolio.html#about" class="nav-link">About</a>
+    <a href="portfolio.html#contact" class="nav-cta">Let's connect</a>
+  </div>
+</nav>
+
+<main>
+
+  <!-- HERO -->
+  <div class="hero">
+    <img src="p2.png" class="hero-img" alt="Brand Intelligence System"/>
+    <div class="hero-gradient"></div>
+    <a href="portfolio.html" class="back-link">All work</a>
+    <div class="hero-content">
+      <div class="hero-eyebrow">Research & Product · Optimite · 2026</div>
+      <h1 class="hero-headline">Building Optimite's Brand Intelligence System — built from zero.</h1>
+      <div class="meta-strip">
+        <div class="meta-item"><div class="meta-label">Role</div><div class="meta-value">Head of Research</div></div>
+        <div class="meta-item"><div class="meta-label">Scope</div><div class="meta-value">Research, Design, AI</div></div>
+        <div class="meta-item"><div class="meta-label">Stack</div><div class="meta-value">Supabase · Vercel · Anthropic</div></div>
+        <div class="meta-item"><div class="meta-label">Status</div><div class="meta-value">Live — pilot</div></div>
+        <div class="meta-item"><div class="meta-label">Brands onboarded</div><div class="meta-value">4 brands</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAT BAND -->
+  <div class="stat-band reveal">
+    <div class="stat-item">
+      <div class="stat-num">4</div>
+      <div class="stat-label">Brands onboarded in pilot</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">1</div>
+      <div class="stat-label">Person — solo end-to-end build</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">6</div>
+      <div class="stat-label">System layers from brief to HTML export</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">0</div>
+      <div class="stat-label">External tools needed to run a campaign</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- INTRO -->
+    <div class="intro-block reveal">
+      <div class="intro-title">Every designer was working from <em>memory.</em></div>
+      <div class="intro-body">
+        <p>Optimite manages email design for a growing portfolio of brands — each with its own logo, colour system, typography, padding rules, tone of voice, and visual references. As the team scaled, a structural problem became impossible to ignore.</p>
+        <p>There was no single source of truth. When a designer started a new campaign, they either asked a colleague, dug through old Figma files, or made educated guesses. Brand consistency was entirely dependent on individual memory. Account managers reviewing designs had no structured checklist — reviews were subjective and inconsistent.</p>
+        <p>I identified this as the highest-leverage problem I could solve. Not a template. Not a guideline document. A living, functional tool that every role could use — and that could eventually power AI-generated design output directly.</p>
+      </div>
+    </div>
+
+    <!-- BEFORE / AFTER -->
+    <div class="before-after reveal">
+      <div class="ba-label">Before vs. After</div>
+      <div class="ba-grid">
+        <div class="ba-col">
+          <div class="ba-col-header">
+            <div class="ba-dot red"></div>
+            <div class="ba-col-title">Before</div>
+          </div>
+          <div class="ba-rows">
+            <div class="ba-row before">Designers asked colleagues for brand specs</div>
+            <div class="ba-row before">No single source of truth — everyone had their own notes</div>
+            <div class="ba-row before">AI sessions started from scratch every time</div>
+            <div class="ba-row before">Account managers manually reviewed designs subjectively</div>
+            <div class="ba-row before">No record of logos, fonts, or reference emails</div>
+            <div class="ba-row before">Email production required full manual setup</div>
+          </div>
+        </div>
+        <div class="ba-col">
+          <div class="ba-col-header">
+            <div class="ba-dot green"></div>
+            <div class="ba-col-title">After</div>
+          </div>
+          <div class="ba-rows">
+            <div class="ba-row after">Brand guide available instantly in the tool</div>
+            <div class="ba-row after">One centralised system per brand, always current</div>
+            <div class="ba-row after">Claude Design Pack downloaded in one click</div>
+            <div class="ba-row after">Built-in AI evaluator checks against brand rules</div>
+            <div class="ba-row after">All assets stored and accessible per brand</div>
+            <div class="ba-row after">AI generates and exports production-ready HTML</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMAGE 1 -->
+    <div class="img-full reveal">
+      <div class="img-ph h-large" style="border:none;padding:0;overflow:hidden;">
+        <img onclick="openLightbox(this.src)" src="bi-hero-wide.png" style="cursor:zoom-in;width:100%;height:100%;object-fit:cover;display:block;">
+      </div>
+    </div>
+
+    <!-- WHAT I BUILT -->
+    <div class="reveal">
+      <div class="section-label">What I built</div>
+      <h2 class="section-headline">Six layers. One pipeline. Zero guesswork.</h2>
+      <p class="section-body">I designed, built, and deployed the system entirely solo — from database architecture to live Vercel deployment. The tool is structured around a per-brand model: each brand has its own guide, asset library, and AI output&nbsp;layer.</p>
+    </div>
+
+    <div class="features reveal">
+
+      <div class="feature">
+        <div class="feature-left">
+          <div class="feature-tag">Layer 01</div>
+          <div class="feature-num-big">01</div>
+        </div>
+        <div class="feature-right">
+          <div class="feature-name">Brand Guide</div>
+          <div class="feature-desc">A structured, always-current reference for every brand — accessible in seconds, no searching&nbsp;required.</div>
+          <div class="feature-bullets">
+            <div class="feature-bullet">Brand identity: logo display, brand story, visual direction and tone</div>
+            <div class="feature-bullet">Layout specs: container width, padding rules, logo count and placement</div>
+            <div class="feature-bullet">Colour system: primary, secondary, accent, and background values with hex codes</div>
+            <div class="feature-bullet">Typography: heading and body font families, weights, and size scales</div>
+            <div class="feature-bullet">Dos and Don'ts: explicit rules for what is and isn't on-brand per client</div>
+            <div class="feature-bullet">Reference emails: screenshot library of approved past campaigns</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-left">
+          <div class="feature-tag">Layer 02</div>
+          <div class="feature-num-big">02</div>
+        </div>
+        <div class="feature-right">
+          <div class="feature-name">Asset Storage</div>
+          <div class="feature-desc">All brand assets stored in the system — no more hunting through Figma files or asking who has the latest&nbsp;logo.</div>
+          <div class="feature-bullets">
+            <div class="feature-bullet">Logo uploads with active/inactive tagging — always the correct version</div>
+            <div class="feature-bullet">Font file storage (.ttf, .otf, .woff2) per brand — used directly in Claude Design sessions</div>
+            <div class="feature-bullet">Reference email screenshots uploaded and organised per brand</div>
+            <div class="feature-bullet">Assets in a dedicated Supabase table, separate from structured data — avoids row size limits</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-left">
+          <div class="feature-tag">Layer 03</div>
+          <div class="feature-num-big">03</div>
+        </div>
+        <div class="feature-right">
+          <div class="feature-name">QA Evaluator</div>
+          <div class="feature-desc">A built-in AI-powered QA tool for account managers — evaluates a design screenshot against the brand's own rules, no manual checklist&nbsp;needed.</div>
+          <div class="feature-bullets">
+            <div class="feature-bullet">Upload a design screenshot directly in the tool</div>
+            <div class="feature-bullet">Checks against live brand spec: colours, typography, layout, logo usage, tone</div>
+            <div class="feature-bullet">Returns a structured pass/fail report with specific flags and suggestions</div>
+            <div class="feature-bullet">Powered by Anthropic API, running server-side via Vercel Edge Function</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-left">
+          <div class="feature-tag">Layer 04</div>
+          <div class="feature-num-big">04</div>
+        </div>
+        <div class="feature-right">
+          <div class="feature-name">Claude Design Pack</div>
+          <div class="feature-desc">A one-click download that gives designers everything needed to start an AI-assisted design session — no setup, no&nbsp;copy-pasting.</div>
+          <div class="feature-bullets">
+            <div class="feature-bullet">Packages brand brief, font files, and reference screenshots into a single bundle</div>
+            <div class="feature-bullet">Pre-flight checklist built into the Design System tab</div>
+            <div class="feature-bullet">Brief generated from the live brand guide — always current, never stale</div>
+            <div class="feature-bullet">Paste into Claude Design, attach Figma file and references, begin</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-left">
+          <div class="feature-tag">Layer 05</div>
+          <div class="feature-num-big">05</div>
+        </div>
+        <div class="feature-right">
+          <div class="feature-name">AI Email Generation</div>
+          <div class="feature-desc">Using the Design Pack and Figma-based design system, designers generate full email campaigns inside Claude Design — visually accurate, brand-consistent,&nbsp;production-ready.</div>
+          <div class="feature-bullets">
+            <div class="feature-bullet">Session uses the Figma file, brand brief, and reference emails as context</div>
+            <div class="feature-bullet">Generates complete layouts matching brand typography, colour, spacing, image treatment</div>
+            <div class="feature-bullet">Iterated and refined within Claude Design using the design system as a live reference</div>
+            <div class="feature-bullet">First live campaign: Redline Hotel Group — Juneteenth Tribute — designed end to end</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-left">
+          <div class="feature-tag">Layer 06</div>
+          <div class="feature-num-big">06</div>
+        </div>
+        <div class="feature-right">
+          <div class="feature-name">HTML Export & Claude Code</div>
+          <div class="feature-desc">Email designs are exported as production-ready HTML directly from Claude — and Claude Code pushes designs into Figma&nbsp;programmatically.</div>
+          <div class="feature-bullets">
+            <div class="feature-bullet">Designs exported as HTML from Claude Design — clean deliverable code, no manual conversion</div>
+            <div class="feature-bullet">Claude Code used to create and manipulate Figma components programmatically</div>
+            <div class="feature-bullet">Closes the loop between AI-generated design and production-ready output</div>
+            <div class="feature-bullet">Entire pipeline from brand brief to HTML runs without leaving the AI environment</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- IMAGE 2 -->
+    <div class="img-two reveal">
+      <div class="img-ph h-medium" style="border:none;padding:0;overflow:hidden;"><img onclick="openLightbox(this.src)" src="bi-qa-evaluator.gif" style="cursor:zoom-in;width:100%;height:100%;object-fit:cover;display:block;"></div>
+      <div class="img-ph h-medium" style="border:none;padding:0;overflow:hidden;"><img onclick="openLightbox(this.src)" src="bi-claude-pack.png" style="cursor:zoom-in;width:100%;height:100%;object-fit:cover;display:block;"></div>
+    </div>
+
+    <!-- TECH DECISIONS -->
+    <div class="reveal">
+      <div class="section-label">Technical decisions</div>
+      <h2 class="section-headline">Built to last, not just to ship.</h2>
+      <p class="section-body">Building solo meant every architectural decision had a direct consequence on reliability. These are the choices that shaped the&nbsp;system.</p>
+    </div>
+
+    <div class="tech-grid reveal">
+      <div class="tech-card">
+        <div class="tech-icon">Database</div>
+        <div class="tech-title">Separate assets table in Supabase</div>
+        <div class="tech-text">Keeping logos and fonts out of the main brand rows avoided row size limits and silent failures I encountered early in development. Binary assets live in a dedicated table — structured data and files never&nbsp;mix.</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">API Security</div>
+        <div class="tech-title">Vercel Edge Functions as API proxy</div>
+        <div class="tech-text">Direct browser-to-Anthropic API calls fail due to CORS and expose credentials. All AI calls route through a serverless function, keeping the API key server-side and the client&nbsp;clean.</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">Reliability</div>
+        <div class="tech-title">Conservative max_tokens on all API calls</div>
+        <div class="tech-text">JSON truncation from insufficient token limits caused hard-to-diagnose bugs early on. Raising limits and adding fallback parsers resolved this. Now all calls have headroom built in by&nbsp;default.</div>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">Deployment</div>
+        <div class="tech-title">GitHub auto-deploy to Vercel</div>
+        <div class="tech-text">Every push to the repo auto-deploys to Vercel. Iteration is fast, the codebase is version-controlled, and there's no manual deployment step — which matters when you're building and maintaining&nbsp;solo.</div>
+      </div>
+    </div>
+
+    <!-- IMAGE 3 -->
+    <div class="img-three reveal">
+      <div class="img-ph h-medium" style="border:none;padding:0;overflow:hidden;"><img onclick="openLightbox(this.src)" src="bi-brand-guide.png" style="cursor:zoom-in;width:100%;height:100%;object-fit:cover;display:block;"></div>
+      <div class="img-ph h-medium" style="border:none;padding:0;overflow:hidden;"><img onclick="openLightbox(this.src)" src="bi-asset-storage.png" style="cursor:zoom-in;width:100%;height:100%;object-fit:cover;display:block;"></div>
+      <div class="img-ph h-medium" style="border:none;padding:0;overflow:hidden;"><img onclick="openLightbox(this.src)" src="bi-email-output.png" style="cursor:zoom-in;width:100%;height:100%;object-fit:cover;display:block;"></div>
+    </div>
+
+    <!-- LEARNINGS -->
+    <div class="reveal">
+      <div class="section-label">What I learned</div>
+      <h2 class="section-headline">On building systems alone.</h2>
+    </div>
+
+    <div class="learnings reveal">
+      <div class="learning">
+        <div class="learning-num">1</div>
+        <div class="learning-body">
+          <div class="learning-title">Define before you build</div>
+          <div class="learning-text">The hardest part of building internal tools isn't the build — it's defining exactly what the tool needs to do before you write a line of code. The brand guide structure went through three iterations before the right information architecture emerged.</div>
+        </div>
+      </div>
+      <div class="learning">
+        <div class="learning-num">2</div>
+        <div class="learning-body">
+          <div class="learning-title">AI QA is only as good as the data behind it</div>
+          <div class="learning-text">The evaluator is only as good as the brand spec it checks against — which made the guide-building phase the most important part of the entire project. Garbage in, garbage out applies to AI-powered tools more than anywhere else.</div>
+        </div>
+      </div>
+      <div class="learning">
+        <div class="learning-num">3</div>
+        <div class="learning-body">
+          <div class="learning-title">Separate assets from structured data</div>
+          <div class="learning-text">Early Supabase row size errors taught me this the hard way. At scale, binary files and structured records need to live separately. This is now a default assumption in how I architect any data-driven tool.</div>
+        </div>
+      </div>
+      <div class="learning">
+        <div class="learning-num">4</div>
+        <div class="learning-body">
+          <div class="learning-title">End-to-end ownership changes how you decide</div>
+          <div class="learning-text">Building the database, the UI, the API integration, and the deployment pipeline alone meant I understood every failure mode — and could fix them without waiting on anyone. Ownership and accountability are the same thing when you're the only person in the room.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MORE PROJECTS -->
+    <div class="more">
+      <div class="more-label">More projects</div>
+      <div class="more-grid">
+        <a href="figma-migration.html" class="more-card reveal-up">
+          <div class="more-img"><img src="figma-hero.jpg" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
+          <div class="more-row"><div><div class="more-name">Figma Migration</div><div class="more-type">Design&nbsp;leadership</div></div><div class="more-year">2025</div></div>
+        </a>
+        <a href="creative-direction.html" class="more-card reveal-up">
+          <div class="more-img"><img src="creative-direction.png" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
+          <div class="more-row"><div><div class="more-name">Creative Direction</div><div class="more-type">Visual systems,&nbsp;AI</div></div><div class="more-year">2025</div></div>
+        </a>
+        <a href="cafe-catalyst.html" class="more-card reveal-up">
+          <div class="more-img"><img src="p4.png" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
+          <div class="more-row"><div><div class="more-name">Cafe Catalyst</div><div class="more-type">Brand&nbsp;identity</div></div><div class="more-year">2024</div></div>
+        </a>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="cs-footer" id="contact">
+      <div class="footer-eyebrow">Let's work together</div>
+      <a href="mailto:connect@maan.ayushporfolio26design" class="footer-email">connect@maan.ayushporfolio26design</a>
+    <div class="footer-contact-row">
+        <a href="mailto:connect@maan.ayushporfolio26design" class="footer-contact-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M2 7l10 6 10-6"></path></svg>connect@maan.ayushporfolio26design</a>
+        <a href="tel:+917678573385" class="footer-contact-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>+91 76785 73385</a>
+      </div>
+      <div class="footer-bottom">
+        <span class="footer-credit">Designed & built by Ayush · @2026</span>
+        <div class="footer-links">
+          <a href="https://www.linkedin.com/in/ayush-maan-200ba8336/" target="_blank" rel="noopener" class="footer-link">LinkedIn</a>
+          <a href="https://www.instagram.com/fthecamera/" target="_blank" rel="noopener" class="footer-link">Instagram</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+(function(){
+  const sc=document.getElementById('starfield'),sx=sc.getContext('2d');
+  let stars=[],W,H;
+  function rs(){ W=sc.width=window.innerWidth; H=sc.height=window.innerHeight; }
+  function is(){ stars=[]; for(let i=0;i<180;i++) stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+0.2,vx:(Math.random()-0.5)*0.12,vy:(Math.random()-0.5)*0.08,op:Math.random()*0.5+0.15,ts:Math.random()*0.02+0.005,to:Math.random()*Math.PI*2,c:Math.random()>0.85?'b':'w'}); }
+  let f=0;
+  function as(){ sx.clearRect(0,0,W,H); f++;
+    for(let s of stars){ s.x+=s.vx; s.y+=s.vy;
+      if(s.x<-2)s.x=W+2; if(s.x>W+2)s.x=-2; if(s.y<-2)s.y=H+2; if(s.y>H+2)s.y=-2;
+      const tw=s.op+Math.sin(f*s.ts+s.to)*0.1;
+      sx.beginPath(); sx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      sx.fillStyle=s.c==='b'?`rgba(125,212,252,${Math.max(0.05,tw)})`:`rgba(255,255,255,${Math.max(0.05,tw)})`; sx.fill(); }
+    requestAnimationFrame(as); }
+  rs(); is(); as(); window.addEventListener('resize',()=>{rs();is();});
+
+  const dot=document.getElementById('cursor-dot'),ring=document.getElementById('cursor-ring');
+  let mx=-999,my=-999,rx=-999,ry=-999;
+  document.addEventListener('mousemove',e=>{ mx=e.clientX; my=e.clientY; dot.style.left=mx+'px'; dot.style.top=my+'px'; });
+  (function ar(){ rx+=(mx-rx)*0.1; ry+=(my-ry)*0.1; ring.style.left=rx+'px'; ring.style.top=ry+'px'; requestAnimationFrame(ar); })();
+  document.querySelectorAll('a,button').forEach(el=>{ el.addEventListener('mouseenter',()=>ring.classList.add('on-link')); el.addEventListener('mouseleave',()=>ring.classList.remove('on-link')); });
+
+  const obs=new IntersectionObserver(entries=>{ entries.forEach(e=>{ if(e.isIntersecting){ const el=e.target; const d=el.classList.contains('reveal-up')?Array.from(el.parentElement.children).indexOf(el)*120:0; setTimeout(()=>el.classList.add('visible'),d); obs.unobserve(el); } }); },{threshold:0.08});
+  document.querySelectorAll('.reveal,.reveal-up').forEach(el=>obs.observe(el));
+})();
+</script>
+<!-- Lightbox -->
+<div id="lightbox-overlay" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:99999;align-items:center;justify-content:center;padding:40px;cursor:zoom-out;">
+  <img id="lightbox-img" src="" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:2px;cursor:default;" onclick="event.stopPropagation()">
+  <button onclick="closeLightbox()" style="position:absolute;top:20px;right:30px;background:none;border:none;color:rgba(255,255,255,0.7);font-size:28px;cursor:pointer;font-family:'DM Sans',sans-serif;line-height:1;">&#10005;</button>
+</div>
+<script>
+function openLightbox(src){
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox-overlay').style.display = 'flex';
+}
+function closeLightbox(){
+  document.getElementById('lightbox-overlay').style.display = 'none';
+}
+</script>
+</body>
+
+</html>
+<style>
+@media (max-width: 1024px) {
+  nav { padding: 18px 32px; }
+  .content { padding: 0 40px; }
+  .hero-content { padding: 0 40px 0; }
+  .back-link { left: 40px !important; }
+  .stat-band { grid-template-columns: 1fr 1fr; }
+  .stat-item { padding: 40px 40px; }
+  .intro-block { grid-template-columns: 1fr; gap: 40px; padding: 72px 0 60px; }
+  .before-after .ba-grid { grid-template-columns: 1fr; }
+  .features .feature { grid-template-columns: 140px 1fr; }
+  .feature-right { padding-left: 40px; }
+  .tech-grid { grid-template-columns: 1fr; }
+  .learnings .learning { grid-template-columns: 60px 1fr; }
+  .more-grid { gap: 16px; }
+  .cs-footer { padding: 80px 0 48px; }
+}
+@media (max-width: 768px) {
+  nav { padding: 16px 20px; }
+  .nav-role { display: none; }
+  .nav-link { display: none; }
+  .nav-right { gap: 20px; }
+  .hero-content { padding: 0 20px 0; }
+  .back-link { left: 20px !important; top: 80px !important; }
+  .hero-eyebrow { font-size: 10px; }
+  
+  .meta-strip { grid-template-columns: 1fr 1fr; }
+  .stat-band { grid-template-columns: 1fr 1fr; }
+  .stat-item { padding: 28px 20px; }
+  .stat-num { font-size: clamp(44px, 10vw, 68px) !important; }
+  .content { padding: 0 20px; }
+  .intro-block { grid-template-columns: 1fr; gap: 28px; padding: 56px 0 44px; }
+  .intro-title { font-size: clamp(26px, 6vw, 38px) !important; }
+  .before-after .ba-grid { grid-template-columns: 1fr; }
+  .ba-col:first-child .ba-col-header, .ba-col:first-child .ba-row { border-right: none; }
+  .section-label { padding-top: 60px; }
+  .section-headline { font-size: clamp(26px, 6vw, 38px) !important; }
+  .features .feature { grid-template-columns: 1fr; padding: 32px 0; }
+  .feature-left { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .feature-num-big { font-size: 44px; }
+  .feature-right { padding-left: 0; border-left: none; border-top: 1px solid var(--border); padding-top: 20px; }
+  .feature-name { font-size: clamp(20px, 5vw, 28px) !important; }
+  .tech-grid { grid-template-columns: 1fr; }
+  .learnings .learning { grid-template-columns: 1fr; }
+  .learning-num { font-size: 32px; margin-bottom: 10px; }
+  .learning-body { padding-left: 0; border-left: none; border-top: 1px solid var(--border); padding-top: 16px; }
+  .more-grid { grid-template-columns: 1fr; gap: 16px; }
+  .img-two, .img-three { grid-template-columns: 1fr !important; }
+  .cs-footer { padding: 56px 0 36px; }
+  .footer-email { font-size: clamp(26px, 8vw, 44px) !important; margin-bottom: 36px; }
+  .footer-bottom { flex-direction: column; gap: 14px; align-items: flex-start; }
+  #cursor-dot, #cursor-ring { display: none; }
+  body { cursor: auto; }
+}
+</style>
+<style>
+* { font-variant-numeric: lining-nums; }
+</style>
+<style>
+.hero-headline { font-family: 'Cormorant Garamond', serif !important; font-size: clamp(40px, 5.5vw, 80px) !important; font-weight: 400 !important; line-height: 1.15 !important; letter-spacing: -0.01em !important; color: var(--text) !important; max-width: 900px !important; margin-bottom: 0 !important; }
+</style>
+<style>
+
+.more-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+.more-card { text-decoration: none; display: block; }
+.more-img { width: 100%; height: 200px; border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+.more-img img, .more-img div { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94); }
+.more-card:hover .more-img img, .more-card:hover .more-img div { transform: scale(1.04); }
+.more-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.more-name { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.more-type { font-size: 12px; color: var(--muted); }
+.more-year { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+</style>
+<style>
+/* Unified body text */
+.intro-body, .section-body, .phase-desc, .phase-bullet,
+.feature-desc, .feature-bullet, .learning-text,
+.outcome-note, .tech-text, .cs-section-body,
+.more-type, .more-name {
+  font-family: 'DM Sans', sans-serif !important;
+  font-weight: 300 !important;
+}
+.intro-body { font-size: 16px !important; line-height: 1.8 !important; color: rgba(240,237,232,0.6) !important; }
+.section-body { font-size: 16px !important; line-height: 1.8 !important; color: rgba(240,237,232,0.55) !important; }
+.phase-desc, .feature-desc { font-size: 15px !important; line-height: 1.75 !important; color: rgba(240,237,232,0.55) !important; }
+.phase-bullet, .feature-bullet { font-size: 14px !important; color: rgba(240,237,232,0.45) !important; }
+.learning-text { font-size: 15px !important; line-height: 1.75 !important; color: rgba(240,237,232,0.55) !important; }
+.outcome-note { font-size: 13px !important; color: var(--muted) !important; }
+.tech-text { font-size: 14px !important; color: rgba(240,237,232,0.55) !important; }
+.more-name { font-size: 15px !important; font-weight: 500 !important; color: var(--text) !important; }
+.more-type { font-size: 12px !important; color: var(--muted) !important; }
+</style>
+<style>
+/* Bigger body text globally */
+.intro-body, .intro-body p { font-size: 18px !important; line-height: 1.85 !important; }
+.section-body { font-size: 18px !important; line-height: 1.85 !important; }
+.phase-desc, .feature-desc { font-size: 17px !important; line-height: 1.8 !important; }
+.phase-bullet, .feature-bullet { font-size: 16px !important; line-height: 1.65 !important; }
+.learning-text { font-size: 17px !important; line-height: 1.8 !important; }
+.learning-title { font-size: clamp(20px, 2vw, 26px) !important; }
+.outcome-value { font-size: clamp(22px, 2.2vw, 32px) !important; }
+.outcome-note { font-size: 15px !important; }
+.outcome-metric { font-size: 12px !important; }
+.tech-text { font-size: 16px !important; line-height: 1.75 !important; }
+.tech-title { font-size: 22px !important; }
+.more-name { font-size: 16px !important; }
+.more-type { font-size: 13px !important; }
+.more-year { font-size: 13px !important; }
+.stat-label { font-size: 15px !important; }
+.meta-value { font-size: 15px !important; }
+.meta-label { font-size: 11px !important; }
+.cs-section-body { font-size: 17px !important; line-height: 1.8 !important; }
+.phase-name { font-size: clamp(26px, 2.6vw, 36px) !important; }
+.section-headline { font-size: clamp(36px, 3.5vw, 52px) !important; }
+.intro-title { font-size: clamp(32px, 3.2vw, 48px) !important; }
+.ba-row { font-size: 16px !important; line-height: 1.6 !important; }
+</style>
+<style>
+.hero-headline, .section-headline, .intro-title, .outcome-value, .phase-name, .feature-name, .learning-title, .cs-headline {
+  text-wrap: balance;
+}
+</style>
+<style>
+@media (max-width: 768px) {
+  .ba-grid { grid-template-columns: 1fr !important; }
+  .ba-col:first-child .ba-col-header { border-right: none !important; }
+  .ba-col:first-child .ba-row { border-right: none !important; }
+  .ba-row { font-size: 15px !important; padding: 14px 20px !important; }
+  .ba-col-header { padding: 14px 20px !important; }
+  .before-after { margin: 48px 0 !important; }
+
+  .features .feature { grid-template-columns: 1fr !important; padding: 28px 0 !important; }
+  .feature-left { display: flex !important; align-items: center !important; gap: 12px !important; margin-bottom: 14px !important; }
+  .feature-num-big { font-size: 40px !important; }
+  .feature-right { padding-left: 0 !important; border-left: none !important; border-top: 1px solid var(--border) !important; padding-top: 18px !important; }
+  .feature-name { font-size: 22px !important; }
+  .feature-desc { font-size: 15px !important; }
+  .feature-bullet { font-size: 14px !important; }
+
+  .tech-grid { grid-template-columns: 1fr !important; }
+  .tech-card { padding: 28px 20px !important; }
+  .tech-title { font-size: 18px !important; }
+  .tech-text { font-size: 15px !important; }
+
+  .stat-band { grid-template-columns: 1fr 1fr !important; }
+  .stat-item { padding: 28px 20px !important; border-right: none !important; border-bottom: 1px solid var(--border) !important; }
+  .stat-num { font-size: 48px !important; }
+  .stat-label { font-size: 13px !important; }
+
+  .content { padding: 0 20px !important; }
+  .intro-block { grid-template-columns: 1fr !important; gap: 28px !important; padding: 56px 0 40px !important; }
+  .intro-title { font-size: 26px !important; }
+  .intro-body { font-size: 16px !important; }
+
+  .section-label { padding-top: 56px !important; }
+  .section-headline { font-size: 26px !important; }
+  .section-body { font-size: 16px !important; }
+
+  .learnings .learning { grid-template-columns: 1fr !important; }
+  .learning-num { font-size: 32px !important; margin-bottom: 10px !important; }
+  .learning-body { padding-left: 0 !important; border-left: none !important; border-top: 1px solid var(--border) !important; padding-top: 16px !important; }
+  .learning-title { font-size: 18px !important; }
+  .learning-text { font-size: 15px !important; }
+
+  .outcomes-grid { grid-template-columns: 1fr !important; }
+  .outcome-card { padding: 28px 20px !important; }
+  .outcome-value { font-size: 20px !important; }
+
+  .more-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+  .img-two, .img-three { grid-template-columns: 1fr !important; }
+  .img-ph.h-medium { height: 220px !important; }
+  .img-ph.h-large { height: 260px !important; }
+
+  .hero-content { padding: 0 20px 0 !important; }
+  .hero-headline { font-size: 32px !important; line-height: 1.15 !important; }
+  .meta-strip { grid-template-columns: 1fr 1fr !important; }
+
+  .cs-footer { padding: 56px 0 36px !important; }
+  .footer-email { font-size: 28px !important; margin-bottom: 36px !important; }
+  .footer-bottom { flex-direction: column !important; gap: 14px !important; }
+
+  #cursor-dot, #cursor-ring { display: none !important; }
+  body { cursor: auto !important; }
+}
+</style>

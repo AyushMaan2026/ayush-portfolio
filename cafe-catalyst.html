@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cafe Catalyst — Ayush Maan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #111214; --text: #f0ede8; --muted: #5a6070;
+  --dimmed: #2a2d35; --orange: #f05a28;
+  --border: rgba(255,255,255,0.07); --card: #0e1012;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; cursor: none; overflow-x: hidden; }
+* { scrollbar-width: thin; scrollbar-color: var(--dimmed) transparent; }
+canvas#starfield { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+#cursor-dot { position: fixed; width: 5px; height: 5px; background: rgba(255,255,255,0.9); border-radius: 50%; pointer-events: none; z-index: 10001; transform: translate(-50%,-50%); }
+#cursor-ring { position: fixed; width: 36px; height: 36px; border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; pointer-events: none; z-index: 10000; transform: translate(-50%,-50%); transition: width 0.3s cubic-bezier(0.25,0.46,0.45,0.94), height 0.3s cubic-bezier(0.25,0.46,0.45,0.94), border-color 0.25s; }
+#cursor-ring.on-link { width: 52px; height: 52px; border-color: rgba(255,255,255,0.5); }
+
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 20px 48px; display: flex; align-items: center; justify-content: space-between; background: rgba(17,18,20,0.85); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); }
+.nav-name { font-size: 14px; font-weight: 500; color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 14px; }
+.nav-role { font-size: 12px; color: var(--muted); font-weight: 300; }
+.nav-right { display: flex; align-items: center; gap: 32px; }
+.nav-link { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.nav-link:hover { color: var(--text); }
+.nav-cta { font-size: 13px; color: var(--text); text-decoration: none; border: 1px solid rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 100px; transition: background 0.2s, border-color 0.2s; }
+.nav-cta:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.35); }
+main { position: relative; z-index: 1; }
+
+/* HERO */
+.hero { position: relative; width: 100%; height: 100vh; overflow: hidden; }
+.hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; z-index: 0; }
+.hero-gradient { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(17,18,20,0.3) 0%, rgba(17,18,20,0.0) 30%, rgba(17,18,20,0.7) 70%, rgba(17,18,20,1) 100%); z-index: 1; pointer-events: none; }
+.hero-content { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 60px 0; }
+.back-link { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,0.6); text-decoration: none; position: absolute; top: 80px; left: 60px; transition: color 0.2s; letter-spacing: 0.04em; text-transform: uppercase; z-index: 3; }
+.back-link:hover { color: var(--text); }
+.back-link::before { content: '←'; }
+.hero-eyebrow { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--orange); margin-bottom: 20px; font-weight: 500; }
+.hero-headline { font-family: 'Cormorant Garamond', serif; font-size: clamp(40px, 5.5vw, 80px); font-weight: 400; line-height: 1.15; letter-spacing: -0.01em; color: var(--text); max-width: 900px; margin-bottom: 0; text-wrap: balance; }
+
+/* META STRIP */
+.meta-strip { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid rgba(255,255,255,0.12); border-left: 1px solid rgba(255,255,255,0.12); margin-top: 48px; }
+.meta-item { padding: 20px 28px; border-right: 1px solid rgba(255,255,255,0.12); border-bottom: 1px solid rgba(255,255,255,0.12); background: rgba(17,18,20,0.6); backdrop-filter: blur(8px); }
+.meta-label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(240,237,232,0.4); margin-bottom: 6px; font-weight: 500; }
+.meta-value { font-size: 15px; color: var(--text); font-weight: 400; }
+
+/* STAT BAND */
+.stat-band { background: var(--card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); display: grid; grid-template-columns: repeat(4, 1fr); }
+.stat-item { padding: 52px 60px; border-right: 1px solid var(--border); }
+.stat-item:last-child { border-right: none; }
+.stat-num { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; font-family: 'DM Sans', sans-serif; font-size: clamp(56px, 6.5vw, 92px); font-weight: 500; line-height: 1; color: var(--text); letter-spacing: -0.03em; margin-bottom: 10px; }
+.stat-label { font-size: 15px; color: rgba(240,237,232,0.5); font-weight: 300; line-height: 1.5; max-width: 160px; }
+
+/* CONTENT */
+.content { max-width: 1280px; margin: 0 auto; padding: 0 60px; }
+.intro-block { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; padding: 100px 0 80px; border-bottom: 1px solid var(--border); }
+.intro-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(32px, 3.2vw, 48px); font-weight: 400; color: var(--text); line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; }
+.intro-title em { font-style: italic; color: rgba(240,237,232,0.5); }
+.intro-body { font-size: 18px; color: rgba(240,237,232,0.6); line-height: 1.85; font-weight: 300; }
+.intro-body p + p { margin-top: 20px; }
+
+/* IMAGES */
+.img-full { width: 100%; margin: 80px 0; }
+.img-ph { width: 100%; border-radius: 2px; background: var(--card); border: 1px dashed rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-size: 12px; letter-spacing: 0.06em; color: var(--muted); }
+.img-ph.h-large { height: 480px; }
+.img-ph.h-medium { height: 360px; }
+.img-ph.h-small { height: 240px; }
+.img-two { width: 100%; margin: 0 0 80px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.img-three { width: 100%; margin: 0 0 80px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+/* SIDE BY SIDE — text + image */
+.side-block { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; margin: 60px 0 80px; }
+.side-block.reverse { direction: rtl; }
+.side-block.reverse > * { direction: ltr; }
+.side-text { }
+.side-text-label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--orange); margin-bottom: 12px; font-weight: 500; }
+.side-text-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(24px, 2.4vw, 34px); font-weight: 400; color: var(--text); line-height: 1.15; letter-spacing: -0.01em; margin-bottom: 16px; text-wrap: balance; }
+.side-text-body { font-size: 16px; color: rgba(240,237,232,0.55); line-height: 1.8; font-weight: 300; }
+.side-img img { width: 100%; border-radius: 2px; display: block; }
+.side-img .img-ph { margin: 0; }
+
+/* SECTIONS */
+.section-label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--orange); margin-bottom: 16px; font-weight: 500; padding-top: 100px; }
+.section-headline { font-family: 'Cormorant Garamond', serif; font-size: clamp(36px, 3.5vw, 52px); font-weight: 400; color: var(--text); letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 20px; text-wrap: balance; }
+.section-headline em { font-style: italic; color: rgba(240,237,232,0.5); }
+.section-body { font-size: 18px; color: rgba(240,237,232,0.55); line-height: 1.85; font-weight: 300; max-width: 640px; margin-bottom: 60px; }
+
+/* CHALLENGE / SOLUTION */
+.cs-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 80px; }
+.cs-col { padding: 52px 48px; background: var(--card); }
+.cs-col + .cs-col { border-left: 1px solid var(--border); }
+.cs-label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--orange); margin-bottom: 16px; font-weight: 500; }
+.cs-heading { font-family: 'Cormorant Garamond', serif; font-size: clamp(24px, 2.4vw, 34px); font-weight: 400; color: var(--text); line-height: 1.15; letter-spacing: -0.01em; margin-bottom: 16px; text-wrap: balance; }
+.cs-body { font-size: 17px; color: rgba(240,237,232,0.55); line-height: 1.8; font-weight: 300; }
+
+/* COLOUR PALETTE */
+.palette { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 48px; }
+.swatch { border-radius: 2px; overflow: hidden; border: 1px solid var(--border); }
+.swatch-block { height: 120px; width: 100%; }
+.swatch-info { padding: 14px 16px; background: var(--card); }
+.swatch-name { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(240,237,232,0.4); margin-bottom: 6px; font-weight: 500; }
+.swatch-hex { font-size: 14px; color: var(--text); font-weight: 400; letter-spacing: 0.04em; }
+
+/* USER PERSONA */
+.persona-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 60px 0 80px; }
+.persona-card { background: var(--card); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.persona-header { padding: 32px 32px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 20px; }
+.persona-avatar { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; background: var(--dimmed); flex-shrink: 0; }
+.persona-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.persona-name { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 400; color: var(--text); margin-bottom: 2px; }
+.persona-role { font-size: 12px; color: var(--muted); }
+.persona-body { padding: 24px 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.persona-col { padding: 0 16px 0 0; }
+.persona-col + .persona-col { padding: 0 0 0 16px; border-left: 1px solid var(--border); }
+.persona-section-title { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--orange); margin-bottom: 10px; font-weight: 500; margin-top: 20px; }
+.persona-section-title:first-child { margin-top: 0; }
+.persona-detail { font-size: 13px; color: rgba(240,237,232,0.55); line-height: 1.6; margin-bottom: 6px; display: flex; gap: 8px; }
+.persona-detail::before { content: '—'; color: var(--orange); opacity: 0.5; flex-shrink: 0; }
+.persona-stat-row { display: grid; grid-template-columns: auto 1fr; gap: 8px; margin-bottom: 6px; }
+.persona-stat-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.persona-stat-value { font-size: 13px; color: rgba(240,237,232,0.6); }
+.persona-quote { padding: 20px 32px; border-top: 1px solid var(--border); font-family: 'Cormorant Garamond', serif; font-size: 17px; font-style: italic; color: rgba(240,237,232,0.5); line-height: 1.5; }
+
+/* LOGO CONCEPT TIMELINE */
+.concept-timeline { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; margin: 40px 0 60px; }
+.concept-item { background: var(--card); padding: 40px 36px 36px; border-right: 1px solid var(--border); position: relative; }
+.concept-item:last-child { border-right: none; }
+.concept-num { font-variant-numeric: lining-nums; font-family: 'Cormorant Garamond', serif; font-size: 64px; font-weight: 300; color: var(--dimmed); line-height: 1; margin-bottom: 16px; }
+.concept-symbol { margin: 0 0 24px; }
+.concept-name { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 400; color: var(--text); margin-bottom: 8px; }
+.concept-desc { font-size: 14px; color: var(--muted); line-height: 1.6; }
+.concept-arrow { position: absolute; right: -12px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background: var(--bg); border: 1px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; font-size: 10px; color: var(--muted); }
+
+/* PHASES */
+.phases { border-top: 1px solid var(--border); margin-bottom: 100px; }
+.phase { display: grid; grid-template-columns: 200px 1fr; gap: 0; border-bottom: 1px solid var(--border); padding: 52px 0; transition: background 0.2s; }
+.phase:hover { background: rgba(255,255,255,0.01); }
+.phase-left { padding-right: 40px; }
+.phase-tag { font-size: 11px; color: var(--orange); letter-spacing: 0.12em; font-weight: 500; margin-bottom: 6px; }
+.phase-num-big { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; font-family: 'Cormorant Garamond', serif; font-size: 72px; font-weight: 300; color: var(--dimmed); line-height: 1; letter-spacing: -0.04em; }
+.phase-right { padding-left: 60px; border-left: 1px solid var(--border); }
+.phase-name { font-family: 'Cormorant Garamond', serif; font-size: clamp(26px, 2.6vw, 36px); font-weight: 400; color: var(--text); line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 16px; text-wrap: balance; }
+.phase-desc { font-size: 17px; color: rgba(240,237,232,0.55); line-height: 1.8; font-weight: 300; margin-bottom: 24px; max-width: 600px; }
+
+/* OUTCOMES */
+.outcomes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 100px; }
+.outcome-card { background: var(--card); padding: 44px 48px; }
+.outcome-metric { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--orange); margin-bottom: 12px; font-weight: 500; }
+.outcome-value { font-family: 'Cormorant Garamond', serif; font-size: clamp(22px, 2.2vw, 32px); font-weight: 300; color: var(--text); line-height: 1.15; letter-spacing: -0.01em; margin-bottom: 10px; text-wrap: balance; }
+.outcome-note { font-size: 15px; color: var(--muted); line-height: 1.55; font-weight: 300; }
+
+/* LEARNINGS */
+.learnings { border-top: 1px solid var(--border); margin-bottom: 100px; }
+.learning { display: grid; grid-template-columns: 80px 1fr; gap: 0; padding: 52px 0; border-bottom: 1px solid var(--border); align-items: start; }
+.learning-num { font-variant-numeric: lining-nums; font-family: 'Cormorant Garamond', serif; font-size: 48px; font-weight: 300; color: var(--orange); opacity: 0.4; line-height: 1; padding-top: 4px; }
+.learning-body { padding-left: 48px; border-left: 1px solid var(--border); }
+.learning-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(20px, 2vw, 26px); font-weight: 300; color: var(--text); letter-spacing: -0.01em; margin-bottom: 12px; line-height: 1.2; text-wrap: balance; }
+.learning-text { font-size: 17px; color: rgba(240,237,232,0.55); line-height: 1.8; font-weight: 300; max-width: 700px; }
+
+/* MORE + FOOTER */
+.more { border-top: 1px solid var(--border); padding: 100px 0 80px; }
+.more-label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 48px; font-weight: 500; }
+.more-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+.more-card { text-decoration: none; display: block; }
+.more-img { width: 100%; height: 200px; border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+.more-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94); }
+.more-card:hover .more-img img { transform: scale(1.04); }
+.more-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.more-name { font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.more-type { font-size: 13px; color: var(--muted); }
+.more-year { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.cs-footer { border-top: 1px solid var(--border); padding: 100px 0 60px; }
+.footer-eyebrow { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 20px; }
+.footer-email { font-family: 'Cormorant Garamond', serif; font-size: clamp(44px, 7vw, 104px); font-weight: 300; color: var(--text); letter-spacing: -0.03em; line-height: 1; text-decoration: none; display: block; transition: color 0.2s; margin-bottom: 80px; text-wrap: balance; }
+.footer-email:hover { color: var(--orange); }
+.footer-contact-row { display: flex; flex-wrap: wrap; gap: 28px; margin-top: -56px; margin-bottom: 56px; }
+.footer-contact-item { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.footer-contact-item:hover { color: var(--text); }
+
+.footer-bottom { display: flex; align-items: center; justify-content: space-between; }
+.footer-credit { font-size: 12px; color: var(--muted); }
+.footer-links { display: flex; gap: 10px; }
+.footer-link { font-size: 12px; color: var(--muted); text-decoration: none; border: 1px solid var(--border); padding: 6px 16px; border-radius: 100px; transition: color 0.2s, border-color 0.2s; }
+.footer-link:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+/* REVEAL */
+.reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.75s ease, transform 0.75s cubic-bezier(0.25,0.46,0.45,0.94); }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.reveal-up { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94); }
+.reveal-up.visible { opacity: 1; transform: translateY(0); }
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+  nav { padding: 18px 32px; }
+  .content { padding: 0 40px; }
+  .hero-content { padding: 0 40px 0; }
+  .back-link { left: 40px !important; }
+  .stat-band { grid-template-columns: 1fr 1fr; }
+  .stat-item { padding: 40px 40px; }
+  .intro-block { grid-template-columns: 1fr; gap: 40px; padding: 72px 0 60px; }
+  .cs-split { grid-template-columns: 1fr; }
+  .cs-col + .cs-col { border-left: none; border-top: 1px solid var(--border); }
+  .side-block { grid-template-columns: 1fr; }
+  .side-block.reverse { direction: ltr; }
+  .concept-timeline { grid-template-columns: 1fr; }
+  .concept-item { border-right: none; border-bottom: 1px solid var(--border); }
+  .persona-grid { grid-template-columns: 1fr; }
+  .outcomes-grid { grid-template-columns: 1fr; }
+  .more-grid { gap: 16px; }
+}
+@media (max-width: 768px) {
+  nav { padding: 16px 20px; }
+  .nav-role { display: none; }
+  .nav-link { display: none; }
+  .nav-right { gap: 20px; }
+  .hero-content { padding: 0 20px 0; }
+  .back-link { left: 20px !important; top: 80px !important; }
+  .meta-strip { grid-template-columns: 1fr 1fr; }
+  .stat-band { grid-template-columns: 1fr 1fr; }
+  .stat-item { padding: 28px 20px; border-right: none; border-bottom: 1px solid var(--border); }
+  .stat-num { font-size: 48px !important; }
+  .content { padding: 0 20px; }
+  .intro-block { grid-template-columns: 1fr; gap: 28px; padding: 56px 0 44px; }
+  .section-label { padding-top: 60px; }
+  .palette { grid-template-columns: 1fr 1fr; }
+  .persona-body { grid-template-columns: 1fr; }
+  .persona-col + .persona-col { padding: 16px 0 0; border-left: none; border-top: 1px solid var(--border); }
+  .img-two, .img-three { grid-template-columns: 1fr; }
+  .outcomes-grid { grid-template-columns: 1fr; }
+  .outcome-card { padding: 28px 20px; }
+  .learnings .learning { grid-template-columns: 1fr; }
+  .learning-num { font-size: 32px; margin-bottom: 10px; }
+  .learning-body { padding-left: 0; border-left: none; border-top: 1px solid var(--border); padding-top: 16px; }
+  .more-grid { grid-template-columns: 1fr; gap: 16px; }
+  .cs-footer { padding: 56px 0 36px; }
+  .footer-email { font-size: clamp(26px, 8vw, 44px) !important; margin-bottom: 36px; }
+  .footer-bottom { flex-direction: column; gap: 14px; align-items: flex-start; }
+  #cursor-dot, #cursor-ring { display: none; }
+  body { cursor: auto; }
+}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+<nav>
+  <a href="portfolio.html" class="nav-name">Ayush <span class="nav-role">Head of Design</span></a>
+  <div class="nav-right">
+    <a href="portfolio.html#work" class="nav-link">Work</a>
+    <a href="portfolio.html#about" class="nav-link">About</a>
+    <a href="portfolio.html#contact" class="nav-cta">Let's connect</a>
+  </div>
+</nav>
+
+<main>
+
+  <!-- HERO — p5.png as per portfolio card -->
+  <div class="hero">
+    <img src="p4.png" class="hero-img" alt="Cafe Catalyst"/>
+    <div class="hero-gradient"></div>
+    <a href="portfolio.html" class="back-link">All work</a>
+    <div class="hero-content">
+      <div class="hero-eyebrow">Brand Identity · Independent Project · 2024</div>
+      <h1 class="hero-headline">A complete brand identity for an urban Delhi café built to break category conventions.</h1>
+      <div class="meta-strip">
+        <div class="meta-item"><div class="meta-label">Role</div><div class="meta-value">Solo Designer</div></div>
+        <div class="meta-item"><div class="meta-label">Discipline</div><div class="meta-value">Brand Identity</div></div>
+        <div class="meta-item"><div class="meta-label">Duration</div><div class="meta-value">4 days</div></div>
+        <div class="meta-item"><div class="meta-label">Deliverables</div><div class="meta-value">Logo, Print, UI, Packaging</div></div>
+        <div class="meta-item"><div class="meta-label">Year</div><div class="meta-value">2024</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAT BAND -->
+  <div class="stat-band reveal">
+    <div class="stat-item"><div class="stat-num">4</div><div class="stat-label">Days to deliver the full brand</div></div>
+    <div class="stat-item"><div class="stat-num">8+</div><div class="stat-label">Deliverable types across print and digital</div></div>
+    <div class="stat-item"><div class="stat-num">2</div><div class="stat-label">Brand colours — the entire palette</div></div>
+    <div class="stat-item"><div class="stat-num">1</div><div class="stat-label">Designer, end to end</div></div>
+  </div>
+
+  <div class="content">
+
+    <!-- INTRO -->
+    <div class="intro-block reveal">
+      <div>
+        <h2 class="intro-title">Fun meets formal.<br><em>A brand that refuses to be ordinary.</em></h2>
+      </div>
+      <div class="intro-body">
+        <p>Cafe Catalyst is a young, urban coffee space in New Delhi targeting professionals who want more from a café — a place to meet, work, think, and belong. The owner came with a clear ambition: fun and urban in energy, luxurious and professional in finish. Not brown. Not conventional.</p>
+        <p>The brief covered brand identity from scratch — logo, colour system, typography, illustration, iconography, print collateral, packaging, and digital UI — all delivered solo in four days.</p>
+      </div>
+    </div>
+
+    <!-- BRIEF -->
+    <div class="section-label reveal">The Brief</div>
+    <h2 class="section-headline reveal">Two creative registers, <em>one brand</em></h2>
+    <div class="cs-split reveal">
+      <div class="cs-col">
+        <div class="cs-label">Challenge</div>
+        <div class="cs-heading">Fun meets formal</div>
+        <div class="cs-body">Incorporating a fun, trendy, urbanistic vibe into the same design as elegance, professionalism and luxury. These two aesthetic registers normally cancel each other out. The task was to make them coexist without&nbsp;compromise.</div>
+      </div>
+      <div class="cs-col">
+        <div class="cs-label">Solution</div>
+        <div class="cs-heading">Curves with discipline</div>
+        <div class="cs-body">Curvy hand-crafted illustrations for warmth and personality, counterbalanced by rigorous minimalism and clean grids. A curvy sans paired with a sleek tall serif. Unconventional brand colours chosen deliberately to break from café brown and make a bold market&nbsp;statement.</div>
+      </div>
+    </div>
+
+    <!-- RESEARCH -->
+    <div class="section-label reveal">Research</div>
+    <h2 class="section-headline reveal">Against convention</h2>
+    <div class="section-body reveal">Studied nationally and globally established café brands. Key breakthrough: nearly every café brand reaches for brown. Taking inspiration from Lloyds Bank — a financial institution that uses green to stand apart in a sea of blue — the decision was made to use violet as the primary brand colour. Not coffee. Not warm neutrals. Something immediately identifiable and owned.</div>
+
+    <!-- USER PERSONA — built from actual project data -->
+    <div class="section-label reveal">User Research</div>
+    <h2 class="section-headline reveal">Who we were <em>designing for</em></h2>
+    <div class="section-body reveal">Two target archetypes were defined to anchor the brand: a young marketing professional who values ambiance and needs a place to think creatively, and an architect who seeks a space that reflects considered design.</div>
+
+    <div class="persona-grid reveal">
+      <!-- Persona 1 -->
+      <div class="persona-card">
+        <div class="persona-header">
+          <div class="persona-avatar" style="background:#2a2030"><img src="persona1.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"></div>
+          <div>
+            <div class="persona-name">Kristin Watson</div>
+            <div class="persona-role">Marketing Manager · Age 27 · Sydney</div>
+          </div>
+        </div>
+        <div class="persona-body">
+          <div class="persona-col">
+            <div class="persona-section-title">About</div>
+            <div class="persona-stat-row"><div class="persona-stat-label">Education</div><div class="persona-stat-value">Business Management</div></div>
+            <div class="persona-stat-row"><div class="persona-stat-label">Status</div><div class="persona-stat-value">Single</div></div>
+            <div class="persona-stat-row"><div class="persona-stat-label">Tech literacy</div><div class="persona-stat-value">High</div></div>
+            <div class="persona-section-title">Core Needs</div>
+            <div class="persona-detail">Stylish, vibrant atmosphere to brainstorm and unwind</div>
+            <div class="persona-detail">Diverse coffee options and seasonal specials</div>
+            <div class="persona-detail">Price relative to quality is critical</div>
+          </div>
+          <div class="persona-col">
+            <div class="persona-section-title">Frustrations</div>
+            <div class="persona-detail">Price feels high relative to quality provided</div>
+            <div class="persona-detail">Crowded, noisy cafés hinder creative thinking</div>
+            <div class="persona-detail">Not enough choice or comparison available</div>
+            <div class="persona-section-title">Platform</div>
+            <div class="persona-detail">Website + Mobile App</div>
+            <div class="persona-section-title">Payment</div>
+            <div class="persona-detail">Cash / Digital</div>
+          </div>
+        </div>
+        <div class="persona-quote">"I am used to online service and I usually do my online shopping from&nbsp;Instagram."</div>
+      </div>
+      <!-- Persona 2 -->
+      <div class="persona-card">
+        <div class="persona-header">
+          <div class="persona-avatar" style="background:#1a2030"><img src="persona2.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"></div>
+          <div>
+            <div class="persona-name">Cameron Williamson</div>
+            <div class="persona-role">Architect · Age 28 · Sydney</div>
+          </div>
+        </div>
+        <div class="persona-body">
+          <div class="persona-col">
+            <div class="persona-section-title">About</div>
+            <div class="persona-stat-row"><div class="persona-stat-label">Education</div><div class="persona-stat-value">Masters in Architecture</div></div>
+            <div class="persona-stat-row"><div class="persona-stat-label">Status</div><div class="persona-stat-value">Married</div></div>
+            <div class="persona-stat-row"><div class="persona-stat-label">Tech literacy</div><div class="persona-stat-value">High</div></div>
+            <div class="persona-section-title">Core Needs</div>
+            <div class="persona-detail">Architectural inspiration and unique design elements</div>
+            <div class="persona-detail">Blend of modern and traditional aesthetics</div>
+            <div class="persona-detail">Quality above everything</div>
+          </div>
+          <div class="persona-col">
+            <div class="persona-section-title">Frustrations</div>
+            <div class="persona-detail">Disappointed when cafés lack architectural character</div>
+            <div class="persona-detail">Struggles to find tranquil spaces for contemplation</div>
+            <div class="persona-detail">Needs a serene space conducive to creative thinking</div>
+            <div class="persona-section-title">Platform</div>
+            <div class="persona-detail">Mobile App</div>
+            <div class="persona-section-title">Payment</div>
+            <div class="persona-detail">Digital only</div>
+          </div>
+        </div>
+        <div class="persona-quote">"I love to sit in quiet places and work long hours without distractions. Hate to complicate&nbsp;stuff."</div>
+      </div>
+    </div>
+
+    <!-- COLOUR SYSTEM -->
+    <div class="section-label reveal">Colour System</div>
+    <h2 class="section-headline reveal">Purple, gold, <em>and nothing else</em></h2>
+    <div class="palette reveal">
+      <div class="swatch">
+        <div class="swatch-block" style="background:#7f4699"></div>
+        <div class="swatch-info"><div class="swatch-name">Cadmium Violet</div><div class="swatch-hex">#7f4699</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-block" style="background:#fdb312"></div>
+        <div class="swatch-info"><div class="swatch-name">Orange Yellow</div><div class="swatch-hex">#fdb312</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-block" style="background:#f5f0e8; border-bottom: 1px solid rgba(255,255,255,0.1)"></div>
+        <div class="swatch-info"><div class="swatch-name">Off-white</div><div class="swatch-hex">#f5f0e8</div></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-block" style="background:#111111"></div>
+        <div class="swatch-info"><div class="swatch-name">Ink</div><div class="swatch-hex">#111111</div></div>
+      </div>
+    </div>
+    <div class="section-body reveal">Two bold primaries with no tertiary palette. A brand with only two colours is immediately recognisable on any surface, at any scale. Every application either leads with violet and uses gold as accent, or inverts the relationship on high-energy touchpoints.</div>
+
+    <!-- Logo lockup — once only -->
+    <div class="img-full reveal">
+      <img onclick="openLightbox(this.src)" src="2.png" style="cursor:zoom-in;width:100%;border-radius:2px;display:block;" alt="Cafe Catalyst logo on purple">
+    </div>
+
+    <!-- TYPOGRAPHY -->
+    <div class="section-label reveal">Typography</div>
+    <h2 class="section-headline reveal">Two voices, <em>one brand</em></h2>
+    <div class="img-two reveal">
+      <div style="border:1px solid var(--border);border-radius:2px;background:var(--card);padding:40px 36px;">
+        <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:20px;font-weight:500;">Primary — Quicksand</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:clamp(52px,7vw,88px);font-weight:300;line-height:1;color:var(--text);margin-bottom:16px;letter-spacing:-.02em;">Aa Bb Cc</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:15px;color:rgba(240,237,232,0.45);line-height:1.7;margin-bottom:16px;">Aa Bb Cc Dd Ee Ff Gg Hh Ii Jj Kk Ll Mm Nn Oo Pp Qq Rr Ss Tt Uu Vv Ww Xx Yy Zz</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.65;">Curvy, friendly, modern. Used for display headlines, signage and app UI.</div>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:2px;background:var(--card);padding:40px 36px;">
+        <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:20px;font-weight:500;">Secondary — Aire Serif</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:clamp(52px,7vw,88px);font-weight:300;font-style:italic;line-height:1;color:var(--text);margin-bottom:16px;letter-spacing:.01em;">Aa Bb Cc</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:15px;color:rgba(240,237,232,0.45);line-height:1.7;margin-bottom:16px;">Aa Bb Cc Dd Ee Ff Gg Hh Ii Jj Kk Ll Mm Nn Oo Pp Qq Rr Ss Tt Uu Vv Ww Xx Yy Zz</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.65;">Sleek stems, tall bodies, luxurious presence. Used for menus, packaging and editorial layouts.</div>
+      </div>
+    </div>
+    <div class="section-body reveal">Quicksand as the primary — curvy, friendly, modern. Gives Cafe Catalyst the fun, approachable personality needed for display headlines and app UI. Aire Serif as the secondary — sleek stems, tall bodies, luxurious presence — used for menus, packaging and editorial layouts.</div>
+
+    <!-- LOGO CREATION -->
+    <div class="section-label reveal">Logo Creation</div>
+    <h2 class="section-headline reveal">From concept <em>to mark</em></h2>
+    <div class="section-body reveal">The mindmap was clear: Community, Professional, Luxury, Catalyst, Coffee, Fun, Urban. The idea was to create something fun but not too loose — a monogram in a circle referencing the top of a coffee cup and the sense of community.</div>
+
+    <!-- Initial concept principles — HTML timeline (no image) -->
+    <div class="concept-timeline reveal">
+      <div class="concept-item">
+        <div class="concept-num">01</div>
+        <div class="concept-symbol">
+          <svg width="120" height="120" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="32" cy="32" r="28" stroke="rgba(255,255,255,0.4)" stroke-width="2" fill="none"/>
+            <circle cx="32" cy="32" r="20" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" fill="none"/>
+            <circle cx="32" cy="32" r="12" stroke="rgba(255,255,255,0.15)" stroke-width="1" fill="none"/>
+          </svg>
+        </div>
+        <div class="concept-name">The circle</div>
+        <div class="concept-desc">Circle for community — references the top of a coffee&nbsp;cup</div>
+        <div class="concept-arrow">→</div>
+      </div>
+      <div class="concept-item">
+        <div class="concept-num">02</div>
+        <div class="concept-symbol">
+          <svg width="120" height="120" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M44 32 C44 20, 28 16, 20 28 C14 37, 20 52, 32 50" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="concept-name">Curved fonts</div>
+        <div class="concept-desc">Curved fonts — keeping it relaxed and&nbsp;fun</div>
+        <div class="concept-arrow">→</div>
+      </div>
+      <div class="concept-item">
+        <div class="concept-num">03</div>
+        <div class="concept-symbol" style="height:120px;display:flex;align-items:center;">
+          <svg viewBox="300 60 1600 1080" width="240" height="120" xmlns="http://www.w3.org/2000/svg">
+            <path style="fill:rgba(255,255,255,0.5)" d="M540.1,1119.9c-9.4,0-18.9-0.3-28.3,0.1c-69.5,2.7-117.7-32.7-154.2-87.2c-20-30-27.8-63.6-29.6-100.5 c-2.4-47.2,10.5-87.2,38.8-123.3c28.1-35.9,64.1-61.3,108.8-71.8c19.3-4.6,39.8-6.5,59.7-6c23.4,0.6,23.8,16.9,19.5,34.6 c-0.8,3.2-8.6,5.9-13.5,6.7c-19.1,3.2-39.1,3.1-57.5,8.6c-63,18.6-101.7,60.5-111.7,125.9c-6.9,45.5,7.5,86.3,36.7,121 c38.4,45.6,89.9,58.1,147.1,53.2c41.2-3.6,79.8-16.1,116.3-35.2c8.6-4.5,16.1-5.3,23.8,1.9c7.5,7,10.3,15,6.7,24.4 c-1.5,3.8-4.7,7.8-8.2,9.9c-28.3,16.9-58.6,30.3-90.7,36.6c-20.5,4-42.4,0.8-63.7,0.8C540.1,1119.6,540.1,1119.7,540.1,1119.9z"/>
+            <path style="fill:rgba(255,255,255,0.5)" d="M1435.6,505.3c-1.9-6.8-2.6-11.7-4.6-16.1c-19.5-43.5-39.2-86.9-58.7-130.3c-5.5-12.2-3.9-21.2,4.8-28.2 c11.8-9.5,24.5-6.6,32.9,8.3c7.5,13.3,14.5,27,21.2,40.8c27.9,57.7,51.4,117.3,68.9,178.9c10,35.4,19.4,71.5,22.8,107.9 c4.6,48.4-12.7,90.4-65.6,106.4c-12.1,3.6-16.8,12.3-21.4,22.3c-4,8.9-11.9,12.4-20.7,10.2c-8.9-2.3-18.6-7.8-17.5-18.1 c1.1-10.6,4.1-23.2,11-30.4c10-10.5,23.4-18.7,36.7-24.8c24.3-11.2,32.5-21.8,32.7-48.8c0.3-45.3-13.4-87.8-26.3-130.5 c-0.7-2.2-4.3-5-6.5-4.9c-23.8,0.8-45.2-7.7-66.6-16.1c-32.4-12.7-61.5-30.9-87.9-53.8c-12-10.4-11.5-19.4-3.8-31.2 c6.6-10,21-11.1,31.1-2.8C1351.9,472,1389.8,491.9,1435.6,505.3z"/>
+            <path style="fill:rgba(255,255,255,0.5)" d="M1728.6,494.4c-3.2,41.6-23.8,70.6-56.7,91.8c-31.8,20.5-67.4,31.1-104.3,38.3c-9.5,1.9-18.9,4.6-28.5,5.2 c-11.6,0.7-21.7-6.7-22.6-14.6c-2-16.9,3.2-26.1,17.7-29.4c13.6-3.1,27.5-4.5,41-7.9c27.4-7,53.9-16.5,77.8-32.2 c18.3-12,27-30.1,30.7-50.3c5.2-28.1-22.8-48.3-51-36.8c-17.4,7.1-34.2,15.7-50.9,24.2c-20.1,10.2-41.6,11.8-63.2,9 c-26.6-3.4-46.8-22.7-51.1-49.4c-7-42.9-2.4-85.5,10.3-126.7c6-19.7,23.8-24.2,39.4-7.6c2.9,3.1,4.2,8.9,4,13.3 c-0.4,8.3-1.6,16.8-4.1,24.7c-8.1,25.4-6.6,51.5-7.9,77.6c-1,19.4,6.3,28.4,30.3,25c15.9-2.2,31-9.8,46.3-15.5 c16.9-6.4,33.1-15.3,50.4-19.6c32.9-8.3,65.2,7.8,79.3,38.8C1721.6,465.5,1724.4,480.3,1728.6,494.4z"/>
+            <path style="fill:rgba(255,255,255,0.5)" d="M1846.9,90.7c20.2,2.7,29.1,17.1,19.1,33.5c-4.8,7.9-12.7,14.4-20.4,20c-16.9,12.3-34.3,23.8-51.8,35.3 c-26.2,17.3-52.3,34.6-78.9,51.4c-6.8,4.3-6.3,7.4-2.4,13.1c38.3,55,66.8,114.8,87.8,178.3c3.6,10.9,6.9,21.8,10.1,32.8 c2.8,9.5-2.8,19.6-13.2,24.5c-10,4.7-20.2,2.4-25.8-6.3c-2.4-3.7-4.4-8-5.6-12.3c-20.8-70.3-52.3-135.5-91.3-197.4 c-3.2-5.1-5.1-6-11.2-2.6c-32.7,17.9-65.6,35.3-98.9,51.9c-13.4,6.7-24,3-31.5-7.4c-8-11.1-6.4-21.2,5.9-28 c18.9-10.4,38.5-19.5,57.6-29.6c81.3-42.9,158.5-92.1,231.8-147.5C1833.6,96.3,1840.6,93.9,1846.9,90.7z"/>
+            <path style="fill:rgba(255,255,255,0.5)" d="M1081.8,635.4c1.4,66.2,22.4,121.8,61.3,170.8c2.8,3.5,5.8,7,8.1,10.9c5.5,9.4,2.4,21-7.2,28.7 c-10.3,8.3-13.9,8.3-24.4-1.1c-22-19.7-37.4-44.3-49.5-70.6c-23-49.9-36.7-102.2-33.9-157.7c0.6-11.4,2.6-22.8,5.3-33.9 c5.8-24,22.7-38.1,46-41.3c12.3-1.7,26.8,1.7,38.1,7.3c15.7,7.8,31.5,17.7,43.2,30.5c36,39.7,70.4,80.9,104.8,122.1 c10.3,12.4,7.6,22.4-5.9,31.4c-7.9,5.3-15.8,6.2-22.8-0.8c-7.6-7.6-14.4-16-21.6-24.1c-29.5-33-58.6-66.3-88.8-98.6 c-7.9-8.4-18.6-14.7-28.8-20.4c-12.3-6.8-20.8-1.8-22.2,12.5C1082.4,613.8,1082.2,626.4,1081.8,635.4z"/>
+            <path style="fill:rgba(255,255,255,0.5)" d="M687.7,767.8c2.4,21.8,5.1,41.7,6.8,61.7c4.6,54.3,20.8,105.6,39.4,156.3c4.5,12.3-2.8,24-16,25.2 c-15.6,1.5-21.9-1.3-27.2-16.6c-10-28.9-19.9-57.9-27.5-87.4c-6.8-26.2-11.9-53-15.3-79.8c-3.1-24.4-3.2-49.3-3.8-74 c-0.3-11.2,5.4-19,16.9-22.1c25.8-6.9,50.9-6.7,72.7,10.4c14.4,11.3,29.5,23.1,40.2,37.6c36,49.2,70.4,99.6,104.8,149.9 c2.9,4.3,3.7,12,2,17c-2.5,7.4-8.9,11.4-17.8,12c-13.2,0.9-21.5-3.9-29.1-15.1c-32.7-48.1-66.5-95.5-99.7-143.2 C723.4,784.2,709.3,773.7,687.7,767.8z"/>
+            <path style="fill:rgba(255,255,255,0.5)" d="M876.5,687.1c-13.8,10.1-25.1,18.3-36.2,26.5c-8.7,6.5-17,13.4-25.8,19.7c-8.3,5.9-19.1,2.8-28-7.4 c-7-8.1-7.2-17.7,0.6-25.1c7.1-6.7,14.7-12.9,22.5-18.8c40.8-31.2,82.8-60.4,130.3-81c15.5-6.7,23.9-4.7,31.2,6.3 c7.8,11.8,4.7,24.1-7.8,30.7c-12,6.4-24,12.8-36,19.1c-6.6,3.5-10,9-8.8,16.3c3,18.8,5.6,37.8,9.8,56.4 c12.9,56.1,42.8,102.2,84.4,141.4c12.6,11.9,13.6,21,5.5,30.8c-8.2,9.8-23.8,10.9-35.8,1.5c-27.6-21.7-47.6-49.9-64.3-80.3 c-16.3-29.6-30.5-60.3-36.1-94.1c-1.4-8.6-2.2-17.2-3.3-25.8C878.4,699.1,877.6,694.7,876.5,687.1z"/>
+            <path style="fill:rgba(255,255,255,0.5)" d="M1400.5,687.5c0.1,13.5-3.8,19-18.2,24.1c-14.9,5.4-30.1,6.4-45,0.3c-20-8.2-38.2-19.6-50.2-37.8 c-16.1-24.4-31.2-49.4-46-74.6c-15.8-26.7-30.7-53.8-46-80.8c-2.1-3.6-4.1-7.3-5.7-11.1c-6.3-14.3-3.2-23.9,9.7-30.7 c12.7-6.8,20.9-4.3,29.2,10c21.2,36.4,41.9,73.1,63.1,109.5c10.3,17.7,20.9,35.4,32.3,52.5c4.7,7,11.5,13.1,18.3,18.3 c8.9,6.8,18.5,7.9,29.1,1.8C1387.2,659.7,1400.4,668.4,1400.5,687.5z"/>
+          </svg>
+        </div>
+        <div class="concept-name">The final mark</div>
+        <div class="concept-desc">Keeping things sleek — giving a luxury&nbsp;feel</div>
+      </div>
+    </div>
+
+    <!-- Concept sketches — left text, right image -->
+    <div class="side-block reveal">
+      <div class="side-text">
+        <div class="side-text-label">Sketching</div>
+        <div class="side-text-title">Rough concepts before digital</div>
+        <div class="side-text-body">Sketched quite a few design ideas. Tried working in circular designs to give that community feeling. The mindmap was clear — Community, Professional, Luxury, Catalyst, Coffee, Fun,&nbsp;Urban.</div>
+      </div>
+      <div class="side-img">
+        <img onclick="openLightbox(this.src)" style="cursor:zoom-in;" src="sketches.png" alt="Logo sketch concepts">
+      </div>
+    </div>
+
+    <!-- Store sign — only once, here in logo section -->
+    <div class="img-full reveal">
+      <img onclick="openLightbox(this.src)" src="store_sign.jpg" style="cursor:zoom-in;width:100%;border-radius:2px;display:block;" alt="Cafe Catalyst store sign in the wild">
+    </div>
+
+    <!-- ILLUSTRATION SYSTEM -->
+    <div class="section-label reveal">Illustration System</div>
+    <h2 class="section-headline reveal">Drawn <em>by hand</em></h2>
+    <div class="section-body reveal">A custom illustration library created for the brand — characters, icons and scenes that bring the café's personality to life across every surface. The style is intentionally expressive: loose lines, bold fills, just enough detail to feel premium without feeling rigid.</div>
+
+    <!-- Illustration — text left, image right -->
+    <div class="side-block reveal">
+      <div class="side-text">
+        <div class="side-text-label">Characters & Scenes</div>
+        <div class="side-text-title">Brand illustration library</div>
+        <div class="side-text-body">A set of original characters — a woman at a café table, a barista, a coffee drinker — drawn in the brand's purple and yellow, placed across packaging, digital surfaces and in-store&nbsp;materials.</div>
+      </div>
+      <div class="side-img">
+        <img onclick="openLightbox(this.src)" style="cursor:zoom-in;" src="illustration.png" alt="Illustration system">
+      </div>
+    </div>
+
+    <!-- Iconography — text right, image left -->
+    <div class="side-block reverse reveal">
+      <div class="side-text">
+        <div class="side-text-label">Iconography</div>
+        <div class="side-text-title">Custom icon set — two colourways</div>
+        <div class="side-text-body">Four bespoke icons drawn for the brand: bread, coffee cup, milkshake and wifi. Produced in gold for warm applications and black for print and dark&nbsp;surfaces.</div>
+      </div>
+      <div class="side-img">
+        <img onclick="openLightbox(this.src)" src="icon.png" style="cursor:zoom-in;background:#fff;border-radius:2px;" alt="Icon set gold and black">
+      </div>
+    </div>
+
+    <!-- PACKAGING -->
+    <div class="section-label reveal">Packaging</div>
+    <h2 class="section-headline reveal">The brand <em>in your hands</em></h2>
+    <div class="section-body reveal">The cup sleeve, takeaway bag and poster are where the illustration system earns its keep. A tiled pattern of brand illustrations in violet on gold turns every piece of packaging into a brand statement.</div>
+
+    <div class="img-full reveal">
+      <img onclick="openLightbox(this.src)" src="screens.png" style="cursor:zoom-in;width:100%;border-radius:2px;display:block;" alt="Packaging spread">
+    </div>
+
+    <div class="img-full reveal">
+      <img onclick="openLightbox(this.src)" src="cafe_presentation.png" style="cursor:zoom-in;width:100%;border-radius:2px;display:block;" alt="Packaging mockups — poster, bag, cup">
+    </div>
+
+    <!-- DIGITAL -->
+    <div class="section-label reveal">Digital Design</div>
+    <h2 class="section-headline reveal">Every screen, <em>on-brand</em></h2>
+    <div class="section-body reveal">The brand system extended fully into digital — a website homepage and mobile app UI, both using the same visual language: yellow as primary canvas, violet as the interaction colour, illustrations as background texture.</div>
+
+    <div class="img-full reveal">
+      <img onclick="openLightbox(this.src)" src="site.png" style="cursor:zoom-in;width:100%;border-radius:2px;display:block;" alt="Website homepage">
+    </div>
+
+    <div class="img-two reveal">
+      <img onclick="openLightbox(this.src)" src="cup.png" style="cursor:zoom-in;width:100%;border-radius:2px;display:block;" alt="Cafe Catalyst cup packaging">
+      <img onclick="openLightbox(this.src)" src="Frame_2.png" style="cursor:zoom-in;width:100%;border-radius:2px;display:block;" alt="Mobile app — homepage">
+    </div>
+
+    <!-- OUTCOMES -->
+    <div class="section-label reveal">Outcomes</div>
+    <h2 class="section-headline reveal">What the <em>brand delivered</em></h2>
+    <div class="outcomes-grid reveal">
+      <div class="outcome-card">
+        <div class="outcome-metric">Delivery</div>
+        <div class="outcome-value">Full brand identity in 4 days, solo</div>
+        <div class="outcome-note">Logo, colour, typography, illustration, packaging, print and digital — end to end without external&nbsp;support.</div>
+      </div>
+      <div class="outcome-card">
+        <div class="outcome-metric">Visual System</div>
+        <div class="outcome-value">Custom illustration library from scratch</div>
+        <div class="outcome-note">Dual-colour icon set and character illustrations deployable across print and screen without&nbsp;inconsistency.</div>
+      </div>
+      <div class="outcome-card">
+        <div class="outcome-metric">Differentiation</div>
+        <div class="outcome-value">Category-breaking colour palette</div>
+        <div class="outcome-note">Cadmium Violet positioned the brand as immediately distinct in a category dominated by warm browns and&nbsp;neutrals.</div>
+      </div>
+      <div class="outcome-card">
+        <div class="outcome-metric">Process</div>
+        <div class="outcome-value">Logo evolved from brief — client committed</div>
+        <div class="outcome-note">The final mark came out different from the initial verbal brief. The client loved it and committed. Design process is&nbsp;nonlinear.</div>
+      </div>
+    </div>
+
+    <!-- LEARNINGS -->
+    <div class="section-label reveal">Learnings</div>
+    <h2 class="section-headline reveal">You can't connect the dots <em>looking forward</em></h2>
+    <div class="learnings reveal">
+      <div class="learning">
+        <div class="learning-num">1</div>
+        <div class="learning-body">
+          <div class="learning-title">A tight system makes speed possible</div>
+          <div class="learning-text">Working across eight deliverable types in four days demonstrated that a disciplined brand system is not a constraint — it is what makes speed possible. When the rules are clear, every decision is faster.</div>
+        </div>
+      </div>
+      <div class="learning">
+        <div class="learning-num">2</div>
+        <div class="learning-body">
+          <div class="learning-title">Stay committed to the direction, not the spec</div>
+          <div class="learning-text">The logo came out completely different from the first brief iteration. The client loved it and stuck with it. Sometimes it is genuinely difficult to understand how things will take shape before they are actually finished.</div>
+        </div>
+      </div>
+      <div class="learning">
+        <div class="learning-num">3</div>
+        <div class="learning-body">
+          <div class="learning-title">Break conventions with conviction, not randomness</div>
+          <div class="learning-text">Choosing violet over brown was a researched strategic decision inspired by how Lloyds Bank used green to own its category. Unconventional choices land when they are grounded in logic.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MORE -->
+    <div class="more">
+      <div class="more-label">More projects</div>
+      <div class="more-grid">
+        <a href="figma-migration.html" class="more-card reveal-up">
+          <div class="more-img"><img src="figma-hero.jpg" alt="Figma Migration"></div>
+          <div class="more-row"><div><div class="more-name">Figma Migration</div><div class="more-type">Design&nbsp;leadership</div></div><div class="more-year">2024</div></div>
+        </a>
+        <a href="optimite-design-guide.html" class="more-card reveal-up">
+          <div class="more-img"><img src="p2.png" alt="Brand Intelligence System"></div>
+          <div class="more-row"><div><div class="more-name">Brand Intelligence System</div><div class="more-type">Internal&nbsp;tooling</div></div><div class="more-year">2026</div></div>
+        </a>
+        <a href="trunk-show.html" class="more-card reveal-up">
+          <div class="more-img"><img src="trunkshow.png" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
+          <div class="more-row"><div><div class="more-name">The Trunk Show</div><div class="more-type">Visual&nbsp;communication</div></div><div class="more-year">2024</div></div>
+        </a>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="cs-footer" id="contact">
+      <div class="footer-eyebrow">Let's work together</div>
+      <a href="mailto:connect@maan.ayushporfolio26design" class="footer-email">connect@maan.ayushporfolio26design</a>
+    <div class="footer-contact-row">
+        <a href="mailto:connect@maan.ayushporfolio26design" class="footer-contact-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M2 7l10 6 10-6"></path></svg>connect@maan.ayushporfolio26design</a>
+        <a href="tel:+917678573385" class="footer-contact-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>+91 76785 73385</a>
+      </div>
+      <div class="footer-bottom">
+        <span class="footer-credit">Designed & built by Ayush · @2026</span>
+        <div class="footer-links">
+          <a href="https://www.linkedin.com/in/ayush-maan-200ba8336/" target="_blank" rel="noopener" class="footer-link">LinkedIn</a>
+          <a href="https://www.instagram.com/fthecamera/" target="_blank" rel="noopener" class="footer-link">Instagram</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+(function(){
+  const sc=document.getElementById('starfield'),sx=sc.getContext('2d');
+  let stars=[],W,H;
+  function rs(){ W=sc.width=window.innerWidth; H=sc.height=window.innerHeight; }
+  function is(){ stars=[]; for(let i=0;i<180;i++) stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+0.2,vx:(Math.random()-0.5)*0.12,vy:(Math.random()-0.5)*0.08,op:Math.random()*0.5+0.15,ts:Math.random()*0.02+0.005,to:Math.random()*Math.PI*2,c:Math.random()>0.85?'b':'w'}); }
+  let f=0;
+  function as(){ sx.clearRect(0,0,W,H); f++;
+    for(let s of stars){ s.x+=s.vx; s.y+=s.vy;
+      if(s.x<-2)s.x=W+2; if(s.x>W+2)s.x=-2; if(s.y<-2)s.y=H+2; if(s.y>H+2)s.y=-2;
+      const tw=s.op+Math.sin(f*s.ts+s.to)*0.1;
+      sx.beginPath(); sx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      sx.fillStyle=s.c==='b'?`rgba(125,212,252,${Math.max(0.05,tw)})`:`rgba(255,255,255,${Math.max(0.05,tw)})`; sx.fill(); }
+    requestAnimationFrame(as); }
+  rs(); is(); as(); window.addEventListener('resize',()=>{rs();is();});
+  const dot=document.getElementById('cursor-dot'),ring=document.getElementById('cursor-ring');
+  let mx=-999,my=-999,rx=-999,ry=-999;
+  document.addEventListener('mousemove',e=>{ mx=e.clientX; my=e.clientY; dot.style.left=mx+'px'; dot.style.top=my+'px'; });
+  (function ar(){ rx+=(mx-rx)*0.1; ry+=(my-ry)*0.1; ring.style.left=rx+'px'; ring.style.top=ry+'px'; requestAnimationFrame(ar); })();
+  document.querySelectorAll('a,button').forEach(el=>{ el.addEventListener('mouseenter',()=>ring.classList.add('on-link')); el.addEventListener('mouseleave',()=>ring.classList.remove('on-link')); });
+  const obs=new IntersectionObserver(entries=>{ entries.forEach(e=>{ if(e.isIntersecting){ const el=e.target; const d=el.classList.contains('reveal-up')?Array.from(el.parentElement.children).indexOf(el)*120:0; setTimeout(()=>el.classList.add('visible'),d); obs.unobserve(el); } }); },{threshold:0.08});
+  document.querySelectorAll('.reveal,.reveal-up').forEach(el=>obs.observe(el));
+})();
+</script>
+<!-- Lightbox -->
+<div id="lightbox-overlay" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:99999;align-items:center;justify-content:center;padding:40px;cursor:zoom-out;">
+  <img id="lightbox-img" src="" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:2px;cursor:default;" onclick="event.stopPropagation()">
+  <button onclick="closeLightbox()" style="position:absolute;top:20px;right:30px;background:none;border:none;color:rgba(255,255,255,0.7);font-size:28px;cursor:pointer;font-family:'DM Sans',sans-serif;line-height:1;">&#10005;</button>
+</div>
+<script>
+function openLightbox(src){
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox-overlay').style.display = 'flex';
+}
+function closeLightbox(){
+  document.getElementById('lightbox-overlay').style.display = 'none';
+}
+</script>
+</body>
+
+</html>
