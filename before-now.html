@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Before Now — Ayush Maan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&family=Caveat:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #111214; --text: #f0ede8; --muted: #5a6070;
+  --orange: #f05a28; --border: rgba(255,255,255,0.07); --card: #0e1012;
+}
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; cursor: none; overflow-x: hidden; min-height: 100vh; }
+* { scrollbar-width: thin; scrollbar-color: #2a2d35 transparent; }
+canvas#starfield { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+#cursor-dot { position: fixed; width: 5px; height: 5px; background: rgba(255,255,255,0.9); border-radius: 50%; pointer-events: none; z-index: 10001; transform: translate(-50%,-50%); }
+#cursor-ring { position: fixed; width: 36px; height: 36px; border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; pointer-events: none; z-index: 10000; transform: translate(-50%,-50%); transition: width 0.3s, height 0.3s, border-color 0.25s; }
+#cursor-ring.on-link { width: 52px; height: 52px; border-color: rgba(255,255,255,0.5); }
+
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 20px 48px; display: flex; align-items: center; justify-content: space-between; background: rgba(17,18,20,0.85); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); }
+.nav-name { font-size: 14px; font-weight: 500; color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 14px; }
+.nav-role { font-size: 12px; color: var(--muted); }
+.nav-right { display: flex; align-items: center; gap: 32px; }
+.nav-link { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.nav-link:hover { color: var(--text); }
+.nav-cta { font-size: 13px; color: var(--text); text-decoration: none; border: 1px solid rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 100px; transition: background 0.2s; }
+.nav-cta:hover { background: rgba(255,255,255,0.06); }
+
+main { position: relative; z-index: 1; }
+
+/* PAGE HEADER */
+.page-header { padding: 160px 60px 60px; max-width: 1100px; margin: 0 auto; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.back-link { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); text-decoration: none; margin-bottom: 48px; transition: color 0.2s; letter-spacing: 0.04em; text-transform: uppercase; }
+.back-link:hover { color: var(--text); }
+.back-link::before { content: '←'; }
+.page-eyebrow { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--orange); margin-bottom: 20px; font-weight: 500; }
+.page-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(56px, 7vw, 104px); font-weight: 300; line-height: 0.95; letter-spacing: -0.02em; color: var(--text); margin-bottom: 24px; }
+.page-desc { font-size: 17px; color: rgba(240,237,232,0.5); font-weight: 300; max-width: 480px; line-height: 1.7; }
+
+/* COLLAGE AREA */
+.collage-wrap {
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 60px 120px;
+  height: 820px;
+}
+
+/* POLAROID CARDS */
+.polaroid {
+  position: absolute;
+  background: #1a1c1f;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 2px;
+  padding: 12px 12px 44px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+  cursor: none;
+  transition: transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94), box-shadow 0.4s ease;
+  z-index: 2;
+}
+
+.polaroid:hover {
+  box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 8px 20px rgba(0,0,0,0.4);
+  z-index: 10;
+}
+
+.polaroid-img-ph {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: rgba(255,255,255,0.2);
+  letter-spacing: 0.06em;
+}
+
+.polaroid-label {
+  font-family: 'Caveat', cursive;
+  font-size: 15px;
+  color: rgba(240,237,232,0.5);
+  text-align: center;
+  padding-top: 10px;
+  font-weight: 400;
+}
+
+/* Centered 3x2 grid with slight rotations */
+.p1 { width: 280px; top: 40px;  left: 60px;  transform: rotate(-3deg); }
+.p1:hover { transform: rotate(-1deg) scale(1.03); }
+.p1 .polaroid-img-ph { background: linear-gradient(135deg, #1a1535, #2d1b69); height: 220px; }
+
+.p2 { width: 260px; top: 20px;  left: 380px; transform: rotate(2deg); }
+.p2:hover { transform: rotate(0.5deg) scale(1.03); }
+.p2 .polaroid-img-ph { background: linear-gradient(135deg, #0d1117, #1c2333); height: 200px; }
+
+.p3 { width: 270px; top: 60px;  left: 680px; transform: rotate(-1.5deg); }
+.p3:hover { transform: rotate(0.5deg) scale(1.03); }
+.p3 .polaroid-img-ph { background: linear-gradient(135deg, #1a1e28, #2d3348); height: 210px; }
+
+.p4 { width: 270px; top: 420px; left: 80px;  transform: rotate(2.5deg); }
+.p4:hover { transform: rotate(1deg) scale(1.03); }
+.p4 .polaroid-img-ph { background: linear-gradient(135deg, #1a1028, #2d1545); height: 210px; }
+
+.p5 { width: 260px; top: 400px; left: 390px; transform: rotate(-2deg); }
+.p5:hover { transform: rotate(-0.5deg) scale(1.03); }
+.p5 .polaroid-img-ph { background: linear-gradient(135deg, #0d1a1a, #1a3333); height: 200px; }
+
+.p6 { width: 275px; top: 430px; left: 690px; transform: rotate(3deg); }
+.p6:hover { transform: rotate(1.5deg) scale(1.03); }
+.p6 .polaroid-img-ph { background: linear-gradient(135deg, #1a1010, #331a1a); height: 215px; }
+
+/* SVG ANNOTATIONS */
+.annotations {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* HANDWRITTEN NOTES */
+.note {
+  position: absolute;
+  font-family: 'Caveat', cursive;
+  font-weight: 400;
+  pointer-events: none;
+  z-index: 4;
+  line-height: 1.3;
+}
+
+.note-1 { top: 10px;  left: 110px; font-size: 17px; color: rgba(240,237,232,0.55); transform: rotate(-6deg); }
+.note-2 { top: 10px;  left: 660px; font-size: 16px; color: rgba(240,237,232,0.45); transform: rotate(4deg); }
+.note-3 { top: 395px; left: 770px; font-size: 16px; color: var(--orange); opacity: 0.75; transform: rotate(3deg); }
+
+/* FOOTER */
+.page-footer { border-top: 1px solid var(--border); padding: 100px 60px 60px; max-width: 1280px; margin: 0 auto; }
+.footer-eyebrow { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 20px; }
+.footer-email { font-family: 'Cormorant Garamond', serif; font-size: clamp(44px, 7vw, 104px); font-weight: 300; color: var(--text); letter-spacing: -0.03em; line-height: 1; text-decoration: none; display: block; transition: color 0.2s; margin-bottom: 80px; }
+.footer-email:hover { color: var(--orange); }
+.footer-contact-row { display: flex; flex-wrap: wrap; gap: 28px; margin-top: -56px; margin-bottom: 56px; }
+.footer-contact-item { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.footer-contact-item:hover { color: var(--text); }
+
+.footer-bottom { display: flex; align-items: center; justify-content: space-between; }
+.footer-credit { font-size: 12px; color: var(--muted); }
+.footer-links { display: flex; gap: 10px; }
+.footer-link { font-size: 12px; color: var(--muted); text-decoration: none; border: 1px solid var(--border); padding: 6px 16px; border-radius: 100px; transition: color 0.2s, border-color 0.2s; }
+.footer-link:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94); }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 768px) {
+  .collage-wrap { padding: 0 20px 100px; min-height: auto; }
+  .polaroid { position: relative !important; top: auto !important; left: auto !important; width: 100% !important; height: auto !important; transform: none !important; margin-bottom: 24px; }
+  .polaroid-img-ph { height: 220px !important; }
+  .annotations { display: none; }
+  .note { display: none; }
+  .page-header { padding: 140px 20px 48px; }
+  .page-footer { padding: 60px 20px 40px; }
+  .footer-email { font-size: 28px !important; margin-bottom: 36px; }
+  .footer-bottom { flex-direction: column; gap: 14px; align-items: flex-start; }
+  nav { padding: 16px 20px; }
+  .nav-role { display: none; }
+  .nav-link { display: none; }
+  #cursor-dot, #cursor-ring { display: none; }
+  body { cursor: auto; }
+}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+<nav>
+  <a href="portfolio.html" class="nav-name">Ayush <span class="nav-role">Head of Design</span></a>
+  <div class="nav-right">
+    <a href="portfolio.html#work" class="nav-link">Work</a>
+    <a href="portfolio.html#about" class="nav-link">About</a>
+    <a href="portfolio.html#contact" class="nav-cta">Let's connect</a>
+  </div>
+</nav>
+
+<main>
+
+  <!-- HERO -->
+  <div style="position:relative;width:100%;height:100vh;overflow:hidden;">
+    <img src="me2.png" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;z-index:0;">
+    <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(17,18,20,0.2) 0%,rgba(17,18,20,0.0) 30%,rgba(17,18,20,0.75) 70%,rgba(17,18,20,1) 100%);z-index:1;"></div>
+    <a href="portfolio.html" style="position:absolute;top:80px;left:60px;z-index:2;display:inline-flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,0.6);text-decoration:none;letter-spacing:0.04em;text-transform:uppercase;">← All work</a>
+    <div style="position:absolute;bottom:0;left:0;right:0;z-index:2;padding:0 60px 0;">
+      <div style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#f05a28;margin-bottom:20px;font-weight:500;">Older work · 2018–2026</div>
+      <h1 style="font-family:'Cormorant Garamond',serif;font-size:clamp(48px,6vw,88px);font-weight:400;line-height:0.95;letter-spacing:-0.02em;color:#f0ede8;margin-bottom:0;">Before now.</h1>
+      <div style="border-top:1px solid rgba(255,255,255,0.12);border-left:1px solid rgba(255,255,255,0.12);display:grid;grid-template-columns:repeat(2,1fr);margin-top:48px;">
+        <div style="padding:20px 28px;border-right:1px solid rgba(255,255,255,0.12);border-bottom:1px solid rgba(255,255,255,0.12);background:rgba(17,18,20,0.6);backdrop-filter:blur(8px);">
+          <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(240,237,232,0.4);margin-bottom:6px;">Period</div>
+          <div style="font-size:14px;color:#f0ede8;">2018–2026</div>
+        </div>
+        <div style="padding:20px 28px;border-right:1px solid rgba(255,255,255,0.12);border-bottom:1px solid rgba(255,255,255,0.12);background:rgba(17,18,20,0.6);backdrop-filter:blur(8px);">
+          <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(240,237,232,0.4);margin-bottom:6px;">Context</div>
+          <div style="font-size:14px;color:#f0ede8;">Different roles, same commitment to design</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-header reveal" style="padding-top:80px;">
+    <p class="page-desc">Work from earlier in my career — different contexts, same commitment to&nbsp;design.</p>
+  </div>
+
+  <div class="collage-wrap">
+
+    <!-- Handwritten notes -->
+    <div class="note note-1">Claude Designing</div>
+    <div class="note note-2">still proud of this</div>
+    <div class="note note-3">My first big break</div>
+
+    <!-- SVG arrows -->
+    <svg class="annotations" viewBox="0 0 1100 820" xmlns="http://www.w3.org/2000/svg" fill="none">
+      <path d="M148 32 C140 55, 130 80, 118 108" stroke="rgba(240,237,232,0.25)" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M118 108 L110 96 M118 108 L128 98" stroke="rgba(240,237,232,0.25)" stroke-width="1.5" stroke-linecap="round"/>
+
+      <path d="M720 32 C730 55, 738 78, 742 105" stroke="rgba(240,237,232,0.2)" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M742 105 L734 95 M742 105 L752 97" stroke="rgba(240,237,232,0.2)" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+
+    <!-- 6 Polaroid cards -->
+    <div class="polaroid p1">
+      <img onclick="document.getElementById('pdf-modal').style.display='flex'" src="p1.png" class="polaroid-img" style="cursor:pointer;width:100%;height:220px;object-fit:cover;display:block;">
+      <div class="polaroid-label">2026 — AI Presentation</div>
+    </div>
+
+    <!-- PDF Modal -->
+    <div id="pdf-modal" onclick="if(event.target===this){this.style.display='none';document.getElementById('pdf-iframe').src=document.getElementById('pdf-iframe').src;}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;align-items:center;justify-content:center;">
+      <div style="position:relative;width:90%;max-width:820px;height:88vh;">
+        <iframe id="pdf-iframe" src="https://drive.google.com/file/d/16lTvXYhsCWdKfT5t8QzhpwWqga_Mhng-/preview" allow="autoplay" style="width:100%;height:100%;border:none;border-radius:2px;background:#fff;"></iframe>
+        <button onclick="document.getElementById('pdf-modal').style.display='none';document.getElementById('pdf-iframe').src=document.getElementById('pdf-iframe').src;" style="position:absolute;top:-40px;right:0;background:none;border:none;color:rgba(255,255,255,0.6);font-size:24px;cursor:pointer;font-family:'DM Sans',sans-serif;">✕</button>
+      </div>
+    </div>
+
+    <!-- Drive Video Modal -->
+    <div id="drive-video-modal" onclick="if(event.target===this){this.style.display='none';document.getElementById('drive-video-iframe').src='';}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;align-items:center;justify-content:center;">
+      <div style="position:relative;width:90%;max-width:900px;aspect-ratio:16/9;">
+        <iframe id="drive-video-iframe" src="https://drive.google.com/file/d/1YTukIXFo-ixoCzlaIETA2on-ww2yvDmz/preview" allow="autoplay" style="width:100%;height:100%;border:none;border-radius:2px;background:#000;"></iframe>
+        <button onclick="document.getElementById('drive-video-modal').style.display='none';document.getElementById('drive-video-iframe').src='';" style="position:absolute;top:-40px;right:0;background:none;border:none;color:rgba(255,255,255,0.6);font-size:24px;cursor:pointer;font-family:'DM Sans',sans-serif;">✕</button>
+      </div>
+    </div>
+
+    <div class="polaroid p2">
+      <img onclick="document.getElementById('drive-video-iframe').src='https://drive.google.com/file/d/1YTukIXFo-ixoCzlaIETA2on-ww2yvDmz/preview?autoplay=1';document.getElementById('drive-video-modal').style.display='flex';" src="bn-p2.png" class="polaroid-img" style="cursor:pointer;width:100%;height:200px;object-fit:cover;display:block;">
+      <div class="polaroid-label">2025 — AI Video</div>
+    </div>
+
+    <div class="polaroid p3" id="videoCard" onclick="document.getElementById('drive-master-iframe').src='https://drive.google.com/file/d/1CiP0A0D0w2rRsEj7PA2N0kNJI1neahAf/preview?autoplay=1';document.getElementById('drive-master-modal').style.display='flex';" style="cursor:pointer;">
+      <div style="position:relative;width:100%;height:210px;overflow:hidden;border-radius:1px;">
+        <img src="pgMe_3.png" id="videoThumb" style="width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(100%);transition:filter 0.5s ease;">
+      </div>
+      <div class="polaroid-label">2024 — Design Podcast Hosting</div>
+    </div>
+
+    <!-- Drive Master Designer Video Modal -->
+    <div id="drive-master-modal" onclick="if(event.target===this){this.style.display='none';document.getElementById('drive-master-iframe').src='';}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;align-items:center;justify-content:center;">
+      <div style="position:relative;width:90%;max-width:520px;height:85vh;">
+        <iframe id="drive-master-iframe" src="https://drive.google.com/file/d/1CiP0A0D0w2rRsEj7PA2N0kNJI1neahAf/preview" allow="autoplay" style="width:100%;height:100%;border:none;border-radius:2px;background:#000;"></iframe>
+        <button onclick="document.getElementById('drive-master-modal').style.display='none';document.getElementById('drive-master-iframe').src='';" style="position:absolute;top:-40px;right:0;background:none;border:none;color:rgba(255,255,255,0.6);font-size:24px;cursor:pointer;font-family:'DM Sans',sans-serif;">✕</button>
+      </div>
+    </div>
+
+    <!-- Drive Event Branding Modal -->
+    <div id="drive-event-modal" onclick="if(event.target===this){this.style.display='none';document.getElementById('drive-event-iframe').src=document.getElementById('drive-event-iframe').src;}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;align-items:center;justify-content:center;">
+      <div style="position:relative;width:90%;max-width:520px;height:85vh;">
+        <iframe id="drive-event-iframe" src="https://drive.google.com/file/d/11F1E9TvjGIryfcnhVNQPNJoiE4zZs0zO/preview" allow="autoplay" style="width:100%;height:100%;border:none;border-radius:2px;background:#fff;"></iframe>
+        <button onclick="document.getElementById('drive-event-modal').style.display='none';document.getElementById('drive-event-iframe').src=document.getElementById('drive-event-iframe').src;" style="position:absolute;top:-40px;right:0;background:none;border:none;color:rgba(255,255,255,0.6);font-size:24px;cursor:pointer;font-family:'DM Sans',sans-serif;">✕</button>
+      </div>
+    </div>
+
+    <!-- Drive Koovs Modal -->
+    <div id="drive-koovs-modal" onclick="if(event.target===this){this.style.display='none';document.getElementById('drive-koovs-iframe').src=document.getElementById('drive-koovs-iframe').src;}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;align-items:center;justify-content:center;">
+      <div style="position:relative;width:90%;max-width:520px;height:85vh;">
+        <iframe id="drive-koovs-iframe" src="https://drive.google.com/file/d/1p3VORDoCCeDN17sEsHLs7mqr7xxyqk8h/preview" allow="autoplay" style="width:100%;height:100%;border:none;border-radius:2px;background:#fff;"></iframe>
+        <button onclick="document.getElementById('drive-koovs-modal').style.display='none';document.getElementById('drive-koovs-iframe').src=document.getElementById('drive-koovs-iframe').src;" style="position:absolute;top:-40px;right:0;background:none;border:none;color:rgba(255,255,255,0.6);font-size:24px;cursor:pointer;font-family:'DM Sans',sans-serif;">✕</button>
+      </div>
+    </div>
+
+    <style>
+      #videoCard:hover #videoThumb { filter: grayscale(0%) !important; }
+    </style>
+
+    <div class="polaroid p4">
+      <img onclick="openLightbox(this.src)" src="bn-p4.png" class="polaroid-img" style="cursor:zoom-in;width:100%;height:210px;object-fit:cover;display:block;">
+      <div class="polaroid-label">2023 — AR Design</div>
+    </div>
+
+    <div class="polaroid p5">
+      <img onclick="document.getElementById('drive-event-modal').style.display='flex'" src="bn-p5.png" class="polaroid-img" style="cursor:pointer;width:100%;height:200px;object-fit:cover;display:block;">
+      <div class="polaroid-label">2022 — Event Branding</div>
+    </div>
+
+    <div class="polaroid p6">
+      <img onclick="document.getElementById('drive-koovs-modal').style.display='flex'" src="p6.png" class="polaroid-img" style="cursor:pointer;width:100%;height:215px;object-fit:cover;display:block;">
+      <div class="polaroid-label">2021 — Koovs x Ayush Maan</div>
+    </div>
+
+  </div>
+
+  <div class="page-footer reveal">
+    <div class="footer-eyebrow">Let's work together</div>
+    <a href="mailto:ayushmaan.creativedesigns@gmail.com" class="footer-email">ayushmaan.creativedesigns@gmail.com</a>
+    <div class="footer-contact-row">
+        <a href="mailto:ayushmaan.creativedesigns@gmail.com" class="footer-contact-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M2 7l10 6 10-6"></path></svg>ayushmaan.creativedesigns@gmail.com</a>
+        <a href="tel:+917678573385" class="footer-contact-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>+91 76785 73385</a>
+      </div>
+    <div class="footer-bottom">
+      <span class="footer-credit">Designed & built by Ayush · @2026</span>
+      <div class="footer-links">
+        <a href="https://www.linkedin.com/in/ayush-maan-200ba8336/" target="_blank" rel="noopener" class="footer-link">LinkedIn</a>
+        <a href="https://www.instagram.com/fthecamera/" target="_blank" rel="noopener" class="footer-link">Instagram</a>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+(function(){
+  const sc=document.getElementById('starfield'),sx=sc.getContext('2d');
+  let stars=[],W,H;
+  function rs(){ W=sc.width=window.innerWidth; H=sc.height=window.innerHeight; }
+  function is(){ stars=[]; for(let i=0;i<180;i++) stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+0.2,vx:(Math.random()-0.5)*0.12,vy:(Math.random()-0.5)*0.08,op:Math.random()*0.5+0.15,ts:Math.random()*0.02+0.005,to:Math.random()*Math.PI*2,c:Math.random()>0.85?'b':'w'}); }
+  let f=0;
+  function as(){ sx.clearRect(0,0,W,H); f++;
+    for(let s of stars){ s.x+=s.vx; s.y+=s.vy;
+      if(s.x<-2)s.x=W+2; if(s.x>W+2)s.x=-2; if(s.y<-2)s.y=H+2; if(s.y>H+2)s.y=-2;
+      const tw=s.op+Math.sin(f*s.ts+s.to)*0.1;
+      sx.beginPath(); sx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      sx.fillStyle=s.c==='b'?`rgba(125,212,252,${Math.max(0.05,tw)})`:`rgba(255,255,255,${Math.max(0.05,tw)})`; sx.fill(); }
+    requestAnimationFrame(as); }
+  rs(); is(); as(); window.addEventListener('resize',()=>{rs();is();});
+
+  const dot=document.getElementById('cursor-dot'),ring=document.getElementById('cursor-ring');
+  let mx=-999,my=-999,rx=-999,ry=-999;
+  document.addEventListener('mousemove',e=>{ mx=e.clientX; my=e.clientY; dot.style.left=mx+'px'; dot.style.top=my+'px'; });
+  (function ar(){ rx+=(mx-rx)*0.1; ry+=(my-ry)*0.1; ring.style.left=rx+'px'; ring.style.top=ry+'px'; requestAnimationFrame(ar); })();
+  document.querySelectorAll('a,button').forEach(el=>{ el.addEventListener('mouseenter',()=>ring.classList.add('on-link')); el.addEventListener('mouseleave',()=>ring.classList.remove('on-link')); });
+
+  const obs=new IntersectionObserver(entries=>{ entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target); } }); },{threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+  // Video card greyscale hover
+  const vc = document.getElementById('videoCard');
+  const vt = document.getElementById('videoThumb');
+  if(vc && vt){
+    vc.addEventListener('mouseenter', () => { vt.style.filter = 'grayscale(0%)'; });
+    vc.addEventListener('mouseleave', () => { vt.style.filter = 'grayscale(100%)'; });
+  }
+})();
+</script>
+<!-- Lightbox -->
+<div id="lightbox-overlay" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:99999;align-items:center;justify-content:center;padding:40px;cursor:zoom-out;">
+  <img id="lightbox-img" src="" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:2px;cursor:default;" onclick="event.stopPropagation()">
+  <button onclick="closeLightbox()" style="position:absolute;top:20px;right:30px;background:none;border:none;color:rgba(255,255,255,0.7);font-size:28px;cursor:pointer;font-family:'DM Sans',sans-serif;line-height:1;">&#10005;</button>
+</div>
+<script>
+function openLightbox(src){
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox-overlay').style.display = 'flex';
+}
+function closeLightbox(){
+  document.getElementById('lightbox-overlay').style.display = 'none';
+}
+</script>
+</body>
+
+</html>
